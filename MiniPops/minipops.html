@@ -1,0 +1,3359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web MiniPops</title>
+    <!-- 
+    Autore Hold3n
+    Progetto Minipops web
+    Url progetto https://github.com/hold3n/MiniPop_variant 
+    Reference O2 Minipops rhythm box (c) DSP Synthesizers 2016
+    Reference Code http://janostman.wordpress.com 
+    Free for non commercial use
+    -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #2c3e50;
+            color: #ecf0f1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            background: #34495e;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.3);
+            max-width: 100%;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .admin-icon {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 24px;
+            color: #e74c3c;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .admin-icon:hover {
+            transform: rotate(90deg);
+        }
+
+        .admin-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #2c3e50;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            z-index: 1000;
+            width: 80%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .admin-panel.active {
+            display: block;
+        }
+
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #e74c3c;
+        }
+
+        .admin-title {
+            font-size: 1.5rem;
+            color: #e74c3c;
+            margin: 0;
+        }
+
+        .close-admin {
+            background: none;
+            border: none;
+            color: #ecf0f1;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .admin-tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .tab-button {
+            background: #34495e;
+            color: #ecf0f1;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .tab-button.active {
+            background: #e74c3c;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 1rem;
+            background: #34495e;
+            border-radius: 5px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
+            display: none;
+        }
+
+        .overlay.active {
+            display: block;
+        }
+
+        h1 {
+            text-align: center;
+            color: #e74c3c;
+            margin-bottom: 2rem;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .pattern-matrix {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 2rem;
+        }
+
+        .instrument-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .instrument-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 100px;
+        }
+
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            width: 140px;
+            margin-left: 12px;
+        }
+
+        .volume-slider {
+            flex: 1;
+            height: 6px;
+            background: #2c3e50;
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+            border: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            position: relative;
+        }
+
+        /* Webkit browsers (Chrome, Safari, Edge) */
+        .volume-slider::-webkit-slider-track {
+            height: 6px;
+            background: #2c3e50;
+            border-radius: 3px;
+            border: none;
+        }
+
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #e74c3c;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #ecf0f1;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: all 0.2s ease;
+            touch-action: manipulation;
+        }
+
+        .volume-slider::-webkit-slider-thumb:hover {
+            background: #c0392b;
+            transform: scale(1.1);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+        }
+
+        .volume-slider::-webkit-slider-thumb:active {
+            transform: scale(1.2);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        }
+
+        /* Firefox */
+        .volume-slider::-moz-range-track {
+            height: 6px;
+            background: #2c3e50;
+            border-radius: 3px;
+            border: none;
+        }
+
+        .volume-slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: #e74c3c;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #ecf0f1;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: all 0.2s ease;
+        }
+
+        .volume-slider::-moz-range-thumb:hover {
+            background: #c0392b;
+            transform: scale(1.1);
+            box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+        }
+
+        .volume-slider::-moz-range-thumb:active {
+            transform: scale(1.2);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        }
+
+        /* IE/Edge (legacy) */
+        .volume-slider::-ms-track {
+            height: 6px;
+            background: transparent;
+            border-color: transparent;
+            color: transparent;
+        }
+
+        .volume-slider::-ms-fill-lower {
+            background: #e74c3c;
+            border-radius: 3px;
+        }
+
+        .volume-slider::-ms-fill-upper {
+            background: #2c3e50;
+            border-radius: 3px;
+        }
+
+        .volume-slider::-ms-thumb {
+            width: 18px;
+            height: 18px;
+            background: #e74c3c;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #ecf0f1;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .volume-slider:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.3);
+            border-radius: 3px;
+        }
+
+        /* Touch device support */
+        .volume-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #e74c3c;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #ecf0f1;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            transition: all 0.2s ease;
+            touch-action: manipulation;
+        }
+
+        /* Larger touch targets for mobile */
+        @media (max-width: 768px) {
+            .volume-slider::-webkit-slider-thumb {
+                width: 22px;
+                height: 22px;
+            }
+            
+            .volume-slider::-moz-range-thumb {
+                width: 22px;
+                height: 22px;
+            }
+            
+            .volume-slider::-ms-thumb {
+                width: 22px;
+                height: 22px;
+            }
+            
+            .volume-control {
+                width: 160px;
+            }
+        }
+
+        /* Accessibility improvements */
+        .volume-slider[disabled] {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .volume-slider[disabled]::-webkit-slider-thumb {
+            cursor: not-allowed;
+            background: #95a5a6;
+        }
+
+        .volume-slider[disabled]::-moz-range-thumb {
+            cursor: not-allowed;
+            background: #95a5a6;
+        }
+
+        .volume-value {
+            min-width: 40px;
+            font-size: 0.75rem;
+            color: #e74c3c;
+            text-align: right;
+            font-weight: bold;
+            font-family: monospace;
+            background: rgba(44, 62, 80, 0.8);
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid #e74c3c;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 18px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #2c3e50;
+            transition: .3s;
+            border-radius: 18px;
+            border: 2px solid #e74c3c;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 10px;
+            width: 10px;
+            left: 2px;
+            bottom: 2px;
+            background-color: #e74c3c;
+            transition: .3s;
+            border-radius: 50%;
+        }
+
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: #2c3e50;
+        }
+
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(18px);
+        }
+
+        .toggle-switch input:not(:checked) + .toggle-slider {
+            border-color: #95a5a6;
+        }
+
+        .toggle-switch input:not(:checked) + .toggle-slider:before {
+            background-color: #95a5a6;
+        }
+
+        .instrument-name {
+            width: 40px;
+            font-weight: bold;
+            color: #e74c3c;
+            transition: color .3s;
+        }
+
+        .instrument-name.disabled {
+            color: #95a5a6;
+        }
+
+        .step-row {
+            display: flex;
+            gap: 4px;
+            flex: 1;
+        }
+
+        .step {
+            width: 30px;
+            height: 30px;
+            background: #2c3e50;
+            border: 2px solid #e74c3c;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .step.active {
+            background: #e74c3c;
+        }
+
+        .step.current {
+            border-color: #f1c40f;
+        }
+
+        .step.group-end {
+            margin-right: 12px;
+        }
+
+        button {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #c0392b;
+        }
+
+        select {
+            padding: 8px;
+            border-radius: 5px;
+            background: #2c3e50;
+            color: white;
+            border: 1px solid #e74c3c;
+        }
+
+        .control-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        input[type="range"] {
+            flex: 1;
+        }
+
+        .custom-patterns-section {
+            margin-top: 2rem;
+            padding-top: 2rem;
+            border-top: 2px solid #e74c3c;
+        }
+
+        .custom-patterns-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .custom-patterns-header h2 {
+            margin: 0;
+        }
+
+        .import-pattern-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .import-pattern-btn:hover {
+            background: #2980b9;
+        }
+
+        .custom-patterns-controls {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .custom-pattern-list {
+            background: #2c3e50;
+            border-radius: 5px;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+
+        .custom-pattern-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            border-bottom: 1px solid #34495e;
+        }
+
+        .custom-pattern-item:last-child {
+            border-bottom: none;
+        }
+
+        .custom-pattern-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .export-textarea {
+            width: 100%;
+            height: 100px;
+            background: #2c3e50;
+            color: #ecf0f1;
+            border: 1px solid #e74c3c;
+            border-radius: 5px;
+            padding: 0.5rem;
+            margin-top: 1rem;
+            font-family: monospace;
+            resize: vertical;
+        }
+
+        .sound-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .sound-section {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: #2c3e50;
+            border-radius: 5px;
+        }
+
+        .sound-section h3 {
+            color: #e74c3c;
+            margin-top: 0;
+            margin-bottom: 1rem;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .control-group label {
+            min-width: 100px;
+        }
+
+        .control-group select,
+        .control-group input[type="range"] {
+            flex: 1;
+        }
+
+        .control-group .toggle-switch {
+            width: 36px;
+            flex-shrink: 0;
+        }
+
+        .control-value {
+            min-width: 60px;
+            text-align: right;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .action-buttons div {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .action-buttons {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .sound-configs {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e74c3c;
+        }
+
+        .config-section {
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 2px solid #e74c3c;
+        }
+
+        .config-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .config-header h3 {
+            color: #e74c3c;
+            margin: 0;
+        }
+
+        .config-save {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .config-name-input {
+            flex: 1;
+            padding: 8px;
+            border-radius: 5px;
+            background: #34495e;
+            color: white;
+            border: 1px solid #e74c3c;
+        }
+
+        .config-list {
+            background: #34495e;
+            border-radius: 5px;
+            padding: 1rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .config-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            border-bottom: 1px solid #2c3e50;
+        }
+
+        .config-item:last-child {
+            border-bottom: none;
+        }
+
+        .config-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .global-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .config-header-actions {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .import-btn {
+            background: #3498db;
+        }
+
+        .import-btn:hover {
+            background: #2980b9;
+        }
+
+        .config-actions button {
+            padding: 5px 10px;
+            font-size: 0.9rem;
+        }
+
+        .file-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            width: 100%;
+        }
+
+        .file-controls span {
+            flex: 1;
+            padding: 8px;
+            background: #2c3e50;
+            border-radius: 5px;
+            border: 1px solid #34495e;
+        }
+
+        .load-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .load-btn:hover {
+            background: #2980b9;
+        }
+
+        button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        button:disabled:hover {
+            background: #95a5a6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Web MiniPops</h1>
+        
+        <div class="admin-icon">⚙️</div>
+
+        <div class="overlay"></div>
+        <div class="admin-panel">
+            <div class="admin-header">
+                <h2 class="admin-title">Personalizzazione Suoni</h2>
+                <button class="close-admin">×</button>
+            </div>
+            <div class="admin-tabs">
+                <button class="tab-button active" data-tab="synth">Audio Synth</button>
+                <button class="tab-button" data-tab="wave">Audio Wave</button>
+            </div>
+            <div class="tab-content active" id="synth">
+                <div class="sound-section">
+                    <h3>Strumento</h3>
+                    <div class="control-group">
+                        <select id="synthInstrumentSelect">
+                            <option value="GU">GU (Guiro)</option>
+                            <option value="BG2">BG2 (Bongo 2)</option>
+                            <option value="BD">BD (Bass Drum)</option>
+                            <option value="CL">CL (Claves)</option>
+                            <option value="CW">CW (Cowbell)</option>
+                            <option value="MA">MA (Maracas)</option>
+                            <option value="CY">CY (Cymbal)</option>
+                            <option value="QU">QU (Quijada)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="sound-section">
+                    <h3>Parametri</h3>
+                    <div class="control-group">
+                        <label>Frequenza</label>
+                        <input type="range" id="synthFreqSlider" class="freq-slider" min="20" max="2000" step="1">
+                        <span class="control-value freq-value">440 Hz</span>
+                    </div>
+                    <div class="control-group">
+                        <label>Decay</label>
+                        <input type="range" id="synthDecaySlider" class="decay-slider" min="0.01" max="1" step="0.01">
+                        <span class="control-value decay-value">0.1 s</span>
+                    </div>
+                    <div class="control-group">
+                        <label>Waveform</label>
+                        <select id="synthWaveformType">
+                            <option value="sine">Sine</option>
+                            <option value="square">Square</option>
+                            <option value="sawtooth">Sawtooth</option>
+                            <option value="triangle">Triangle</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <div>
+                        <button id="synthPreview" class="preview-btn">Anteprima</button>
+                        <button id="synthApply" class="save-btn">Applica</button>
+                    </div>
+                    <button id="synthReset" class="reset-btn">Reset</button>
+                </div>
+            </div>
+            <div class="tab-content" id="wave">
+                <div class="sound-section">
+                    <h3>Strumento</h3>
+                    <div class="control-group">
+                        <select id="waveInstrumentSelect">
+                            <option value="GU">GU (Guiro)</option>
+                            <option value="BG2">BG2 (Bongo 2)</option>
+                            <option value="BD">BD (Bass Drum)</option>
+                            <option value="CL">CL (Claves)</option>
+                            <option value="CW">CW (Cowbell)</option>
+                            <option value="MA">MA (Maracas)</option>
+                            <option value="CY">CY (Cymbal)</option>
+                            <option value="QU">QU (Quijada)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="sound-section">
+                    <h3>File Audio</h3>
+                    <div class="control-group">
+                        <div class="file-controls">
+                            <span id="selectedFileName">Nessun file selezionato</span>
+                            <button id="loadAudioBtn" class="load-btn">Carica File</button>
+                            <input type="file" id="waveAudioFile" accept="audio/*" style="display: none;">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="sound-section">
+                    <h3>Parametri Audio Importato</h3>
+                    <div class="control-group">
+                        <label>Volume Base</label>
+                        <input type="range" id="waveVolumeSlider" min="0.1" max="2.0" step="0.1" value="1.0">
+                        <span class="control-value wave-volume-value">1.0x</span>
+                    </div>
+                    <div class="control-group">
+                        <label>Intensity Envelope</label>
+                        <input type="range" id="waveFadeSlider" min="0.01" max="1.0" step="0.01" value="0.5">
+                        <span class="control-value wave-fade-value">0.5</span>
+                    </div>
+                    <div class="control-group">
+                        <label>Envelope</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="waveDisableEnvelope" checked>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <div>
+                        <button id="wavePreview" class="preview-btn" disabled>Anteprima</button>
+                        <button id="waveApply" class="save-btn" disabled>Applica</button>
+                    </div>
+                    <button id="waveReset" class="reset-btn">Reset</button>
+                </div>
+            </div>
+
+            <div class="config-section">
+                <div class="config-header">
+                    <h3>Configurazioni Salvate</h3>
+                    <div class="config-header-actions">
+                        <input type="file" id="importConfig" accept=".zip" style="display: none;">
+                        <button id="importConfigBtn" class="import-btn">Importa</button>
+                        <button id="resetAllConfig" class="reset-btn">Reset Globale</button>
+                    </div>
+                </div>
+                <div class="config-save">
+                    <input type="text" id="configName" class="config-name-input" placeholder="Nome configurazione">
+                    <button id="saveConfig" class="save-btn">Salva Configurazione</button>
+                </div>
+                <div id="configList" class="config-list">
+                    <!-- Le configurazioni salvate verranno aggiunte qui -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button id="playBtn">Play/Stop</button>
+            <select id="patternSelect">
+                <option value="0">Hard Rock</option>
+                <option value="1">Disco</option>
+                <option value="2">Reggae</option>
+                <option value="3">Rock</option>
+                <option value="4">Samba</option>
+                <option value="5">Rumba</option>
+                <option value="6">Cha-Cha</option>
+                <option value="7">Swing</option>
+                <option value="8">Bossa Nova</option>
+                <option value="9">Beguine</option>
+                <option value="10">Synthpop</option>
+                <option value="11">Boogie</option>
+                <option value="12">Waltz</option>
+                <option value="13">Jazz Rock</option>
+                <option value="14">Slow Rock</option>
+                <option value="15">Oxygen</option>
+            </select>
+            <button id="resetBtn">Reset</button>
+        </div>
+
+        <div class="control-row">
+            <span>Tempo:</span>
+            <input type="range" id="tempoSlider" min="60" max="200" value="120">
+            <span id="tempoValue">120 BPM</span>
+        </div>
+
+        <div class="control-row">
+            <span>Steps:</span>
+            <input type="range" id="stepsSlider" min="5" max="20" value="16">
+            <span id="stepsValue">16 Steps</span>
+        </div>
+
+        <div id="patternMatrix" class="pattern-matrix">
+            <!-- Instrument rows will be added by JavaScript -->
+        </div>
+
+        <div class="custom-patterns-section">
+            <div class="custom-patterns-header">
+                <h2>Custom Patterns</h2>
+                <div>
+                    <input type="file" id="importPattern" accept=".zip" style="display: none;">
+                    <button id="importPatternBtn" class="import-pattern-btn">Importa Pattern</button>
+                </div>
+            </div>
+            <div class="custom-patterns-controls">
+                <input type="text" id="patternName" placeholder="Pattern name" 
+                       style="padding: 8px; border-radius: 5px; background: #2c3e50; color: white; border: 1px solid #e74c3c;">
+                <button id="savePattern">Save Current Pattern</button>
+            </div>
+            
+            <div id="customPatternList" class="custom-pattern-list">
+                <!-- Custom patterns will be added here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== CONFIGURATION AND DATA ==========
+        const CONFIG = {
+            TEMPO: { MIN: 60, MAX: 200, DEFAULT: 120 },
+            STEPS: { MIN: 5, MAX: 20, DEFAULT: 16 },
+            GAIN: { DEFAULT: 0.3, MIN: 0.01 },
+            STORAGE_KEYS: {
+                CUSTOM_PATTERNS: 'customPatterns',
+                CUSTOM_INSTRUMENTS: 'customInstruments',
+                WAVEFORM_TYPE: 'waveformType',
+                SOUND_CONFIGS: 'soundConfigs'
+            }
+        };
+
+        const INSTRUMENTS = [
+            { name: 'GU', freq: 60, decay: 0.1 },
+            { name: 'BG2', freq: 100, decay: 0.1 },
+            { name: 'BD', freq: 50, decay: 0.15 },
+            { name: 'CL', freq: 800, decay: 0.05 },
+            { name: 'CW', freq: 600, decay: 0.08 },
+            { name: 'MA', freq: 300, decay: 0.1 },
+            { name: 'CY', freq: 1000, decay: 0.05 },
+            { name: 'QU', freq: 400, decay: 0.1 }
+        ];
+
+        const PRESET_PATTERNS = {
+            0: [[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], [0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0], [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], [0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0], [0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0], [0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1], [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], [0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0]],
+            1: [[1,0,0,0,1,0,1,0,1,0,0,0,1,0,1,0], [0,0,1,0,0,0,0,1,0,0,1,0,0,0,0,1], [1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1], [0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0], [0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1], [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], [1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0], [0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1]],
+            2: [[1,0,0,0,0,1,0,0,1,0,0,0,0,1,0,0], [0,0,1,0,1,0,0,0,0,0,1,0,1,0,0,0], [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], [0,1,0,1,0,0,1,0,0,1,0,1,0,0,1,0], [0,0,1,0,0,1,0,0,0,0,1,0,0,1,0,0], [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], [0,0,0,1,0,0,0,1,0,0,0,1,0,0,0,1], [0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0]],
+            3: [[1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], [0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0], [1,0,0,0,1,0,0,0,1,0,0,0,1,0,0,0], [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1], [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1], [1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1], [0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0]],
+            4: [[1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1], [1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1], [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], [0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0], [1,1,0,1,1,1,0,1,1,1,0,1,1,1,0,1], [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1], [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1], [1,1,1,0,1,1,1,0,1,1,1,0,1,1,1,0]],
+            5: [[1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1], [1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0], [0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1], [1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1], [0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0], [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]],
+            6: [[1,0,0,1,0,1,0,0,1,0,0,1,0,1,0,0], [0,1,1,0,1,0,1,1,0,1,1,0,1,0,1,1], [1,0,0,1,0,1,0,0,1,0,0,1,0,1,0,0], [0,1,1,0,1,0,1,1,0,1,1,0,1,0,1,1], [1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0], [0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1], [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1]],
+            7: [[1,0,0,0,1,0,0,1,1,0,0,0,1,0,0,1], [0,0,1,0,0,0,1,0,0,0,1,0,0,0,1,0], [1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1], [0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0], [1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1], [0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0], [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], [0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1]],
+            8: [[1,0,1,0,1,1,0,1,1,0,1,0,1,1,0,1], [0,1,0,1,0,0,1,0,0,1,0,1,0,0,1,0], [1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0], [0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1], [1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1], [0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0], [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1], [0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0]],
+            9: [[1,0,1,0,1,0,1,0,1,0,1,1,1,0,1,0], [0,1,0,1,0,1,0,1,0,1,0,0,0,1,0,1], [1,0,0,1,1,0,0,1,1,0,0,1,1,0,0,1], [0,1,1,0,0,1,1,0,0,1,1,0,0,1,1,0], [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1], [1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0], [0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1]],
+            10: [[1,0,1,0,1,0,1,1,1,0,1,0,1,0,1,1], [0,1,0,1,0,1,0,0,0,1,0,1,0,1,0,0], [1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0], [0,0,1,1,0,0,1,1,0,0,1,1,0,0,1,1], [1,1,0,0,1,1,0,0,1,1,0,0,1,1,0,0], [0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1], [1,0,1,1,1,0,1,1,1,0,1,1,1,0,1,1], [0,1,0,0,0,1,0,0,0,1,0,0,0,1,0,0]],
+            11: [[1,0,1,1,0,1,1,0,1,1,0,1], [0,1,0,0,1,0,0,1,0,0,1,0], [1,0,1,1,0,1,1,0,1,1,0,1], [0,1,0,0,1,0,0,1,0,0,1,0], [1,0,1,1,0,1,1,0,1,1,0,1], [0,1,0,0,1,0,0,1,0,0,1,0], [1,1,1,0,1,1,1,0,1,1,1,0], [0,0,0,1,0,0,0,1,0,0,0,1]],
+            12: [[1,0,0,0,1,0,0,0,1,0,0,0], [0,1,0,0,0,1,0,0,0,1,0,0], [1,0,0,1,0,0,1,0,0,1,0,0], [0,0,1,0,0,1,0,0,1,0,0,1], [1,0,0,1,0,0,1,0,0,1,0,0], [0,1,0,0,1,0,0,1,0,0,1,0], [1,0,1,0,1,0,1,0,1,0,1,0], [0,1,0,1,0,1,0,1,0,1,0,1]],
+            13: [[1,0,0,0,1,0,0,0,1,0,0,0], [0,0,1,0,0,0,1,0,0,0,1,0], [1,0,0,1,1,0,0,1,1,0,0,1], [0,1,1,0,0,1,1,0,0,1,1,0], [1,0,1,0,1,0,1,0,1,0,1,0], [0,1,0,1,0,1,0,1,0,1,0,1], [1,1,0,0,1,1,0,0,1,1,0,0], [0,0,1,1,0,0,1,1,0,0,1,1]],
+            14: [[1,0,0,0,1,0,0,0,1,0,0,0], [0,0,1,0,0,0,1,0,0,0,1,0], [1,0,0,1,1,0,0,1,1,0,0,1], [0,1,0,0,0,1,0,0,0,1,0,0], [1,0,1,0,1,0,1,0,1,0,1,0], [0,0,1,1,0,0,1,1,0,0,1,1], [1,1,0,0,1,1,0,0,1,1,0,0], [0,1,0,1,0,1,0,1,0,1,0,1]],
+            15: [[1,1,1,1,1,1,1,1,1,1,1,1], [1,0,1,0,1,0,1,0,1,0,1,0], [0,1,0,1,0,1,0,1,0,1,0,1], [1,1,0,0,1,1,0,0,1,1,0,0], [0,0,1,1,0,0,1,1,0,0,1,1], [1,0,1,0,1,0,1,0,1,0,1,0], [0,1,0,1,0,1,0,1,0,1,0,1], [1,1,1,1,1,1,1,1,1,1,1,1]]
+        };
+
+        // ========== UTILITIES ==========
+        class Storage {
+            static save(key, data) {
+                try {
+                    localStorage.setItem(key, JSON.stringify(data));
+                    return true;
+                } catch (error) {
+                    console.error('Storage save error:', error);
+                    return false;
+                }
+            }
+
+            static load(key, defaultValue = null) {
+                try {
+                    const data = localStorage.getItem(key);
+                    return data ? JSON.parse(data) : defaultValue;
+                } catch (error) {
+                    console.error('Storage load error:', error);
+                    return defaultValue;
+                }
+            }
+
+            static remove(key) {
+                try {
+                    localStorage.removeItem(key);
+                    return true;
+                } catch (error) {
+                    console.error('Storage remove error:', error);
+                    return false;
+                }
+            }
+        }
+
+        class EventBus {
+            constructor() {
+                this.events = new Map();
+            }
+
+            on(event, callback) {
+                if (!this.events.has(event)) {
+                    this.events.set(event, new Set());
+                }
+                this.events.get(event).add(callback);
+            }
+
+            off(event, callback) {
+                if (this.events.has(event)) {
+                    this.events.get(event).delete(callback);
+                }
+            }
+
+            emit(event, data) {
+                if (this.events.has(event)) {
+                    this.events.get(event).forEach(callback => callback(data));
+                }
+            }
+        }
+
+        class FileUtils {
+            static downloadBlob(blob, filename) {
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+                link.click();
+                URL.revokeObjectURL(url);
+            }
+
+            static async loadAudioFile(file, audioContext) {
+                try {
+                    console.log('🔍 ANALISI FILE AUDIO:');
+                    console.log(`📁 File: ${file.name}`);
+                    
+                    const arrayBuffer = await file.arrayBuffer();
+                    
+                    // ========== ANALISI HEADER WAV PER SAMPLE RATE ORIGINALE ==========
+                    const headerView = new DataView(arrayBuffer, 0, 44);
+                    let originalSampleRate = null;
+                    
+                    try {
+                        const riff = String.fromCharCode(headerView.getUint8(0), headerView.getUint8(1), headerView.getUint8(2), headerView.getUint8(3));
+                        if (riff === 'RIFF') {
+                            originalSampleRate = headerView.getUint32(24, true);
+                            console.log(`🎧 Sample rate originale dal header WAV: ${originalSampleRate}Hz`);
+                        }
+                    } catch (headerError) {
+                        console.warn('⚠️ Impossibile leggere header WAV, usando decode normale');
+                    }
+                    
+                    // ========== DECODE AUDIO ==========
+                    const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+                    
+                    console.log(`🎧 AudioBuffer decodificato: ${audioBuffer.sampleRate}Hz`);
+                    console.log(`📏 Durata: ${audioBuffer.duration.toFixed(3)}s`);
+                    console.log(`📊 Canali: ${audioBuffer.numberOfChannels}`);
+                    console.log(`🔢 Samples: ${audioBuffer.length}`);
+                    
+                    // ========== CONVERSIONE SAMPLE RATE SE NECESSARIO ==========
+                    const targetSampleRate = audioContext.sampleRate; // Usa sample rate dell'AudioContext passato
+                    
+                    if (audioBuffer.sampleRate !== targetSampleRate) {
+                        console.warn(`⚠️ SAMPLE RATE MISMATCH RILEVATO!`);
+                        console.warn(`📤 Audio decodificato: ${audioBuffer.sampleRate}Hz`);
+                        console.warn(`🎯 Target AudioContext: ${targetSampleRate}Hz`);
+                        console.warn(`🔧 Avvio conversione con mantenimento del pitch...`);
+                        
+                        const convertedBuffer = this.resampleAudioBufferWithPitchCorrection(audioBuffer, targetSampleRate, audioContext);
+                        
+                        console.log('✅ CONVERSIONE COMPLETATA:');
+                        console.log(`🎯 Nuovo sample rate: ${convertedBuffer.sampleRate}Hz`);
+                        console.log(`📏 Nuova durata: ${convertedBuffer.duration.toFixed(3)}s`);
+                        console.log(`🔢 Nuovi samples: ${convertedBuffer.length}`);
+                        
+                        return convertedBuffer;
+                    } else {
+                        console.log('✅ Sample rate già corretto per AudioContext, nessuna conversione necessaria');
+                        return audioBuffer;
+                    }
+                } catch (error) {
+                    console.error('❌ Errore caricamento audio:', error);
+                    throw new Error(`Audio loading failed: ${error.message}`);
+                }
+            }
+
+            // ========== CONVERSIONE SAMPLE RATE CON MANTENIMENTO PITCH ==========
+            static resampleAudioBufferWithPitchCorrection(sourceBuffer, targetSampleRate, audioContext) {
+                const sourceSampleRate = sourceBuffer.sampleRate;
+                const numberOfChannels = sourceBuffer.numberOfChannels;
+                
+                // Calcola il ratio di conversione
+                const resampleRatio = targetSampleRate / sourceSampleRate;
+                const newLength = Math.round(sourceBuffer.length * resampleRatio);
+                
+                console.log(`🔄 Resampling: ${sourceSampleRate}Hz → ${targetSampleRate}Hz`);
+                console.log(`📐 Ratio: ${resampleRatio.toFixed(6)}`);
+                console.log(`📏 Lunghezza: ${sourceBuffer.length} → ${newLength} samples`);
+                
+                // Crea il nuovo buffer
+                const newBuffer = audioContext.createBuffer(numberOfChannels, newLength, targetSampleRate);
+                
+                // Resample ogni canale con interpolazione cubica per migliore qualità
+                for (let channel = 0; channel < numberOfChannels; channel++) {
+                    const sourceData = sourceBuffer.getChannelData(channel);
+                    const targetData = newBuffer.getChannelData(channel);
+                    
+                    // Interpolazione cubica per migliore qualità audio
+                    for (let i = 0; i < newLength; i++) {
+                        const sourceIndex = i / resampleRatio;
+                        const index = Math.floor(sourceIndex);
+                        const fraction = sourceIndex - index;
+                        
+                        // Interpolazione cubica (più precisa di quella lineare)
+                        let sample;
+                        if (index >= 1 && index < sourceData.length - 2) {
+                            const y0 = sourceData[index - 1];
+                            const y1 = sourceData[index];
+                            const y2 = sourceData[index + 1];
+                            const y3 = sourceData[index + 2];
+                            
+                            // Interpolazione cubica di Catmull-Rom
+                            const a0 = -0.5 * y0 + 1.5 * y1 - 1.5 * y2 + 0.5 * y3;
+                            const a1 = y0 - 2.5 * y1 + 2 * y2 - 0.5 * y3;
+                            const a2 = -0.5 * y0 + 0.5 * y2;
+                            const a3 = y1;
+                            
+                            sample = a0 * fraction * fraction * fraction + 
+                                    a1 * fraction * fraction + 
+                                    a2 * fraction + 
+                                    a3;
+                        } else if (index + 1 < sourceData.length) {
+                            // Interpolazione lineare per i bordi
+                            sample = sourceData[index] * (1 - fraction) + 
+                                    sourceData[index + 1] * fraction;
+                        } else {
+                            // Ultimo sample
+                            sample = sourceData[index] || 0;
+                        }
+                        
+                        targetData[i] = sample;
+                    }
+                }
+                
+                console.log(`✅ Resampling completato con interpolazione cubica`);
+                return newBuffer;
+            }
+
+            static writeString(view, offset, string) {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            }
+
+            static floatTo16BitPCM(view, offset, input) {
+                for (let i = 0; i < input.length; i++, offset += 2) {
+                    const s = Math.max(-1, Math.min(1, input[i]));
+                    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+                }
+            }
+
+            static audioBufferToWav(buffer) {
+                console.log('💾 ESPORTAZIONE AUDIO A WAV:');
+                console.log(`🎧 Sample Rate: ${buffer.sampleRate}Hz`);
+                console.log(`📏 Durata: ${buffer.duration.toFixed(3)}s`);
+                console.log(`📊 Canali: ${buffer.numberOfChannels}`);
+                
+                const numberOfChannels = buffer.numberOfChannels;
+                const sampleRate = buffer.sampleRate;
+                const format = 1; // PCM
+                const bitDepth = 16;
+                
+                const bytesPerSample = bitDepth / 8;
+                const blockAlign = numberOfChannels * bytesPerSample;
+                
+                const wavBuffer = buffer.getChannelData(0);
+                const arrayBuffer = new ArrayBuffer(44 + wavBuffer.length * 2);
+                const view = new DataView(arrayBuffer);
+                
+                // WAV Header
+                this.writeString(view, 0, 'RIFF');
+                view.setUint32(4, 36 + wavBuffer.length * 2, true);
+                this.writeString(view, 8, 'WAVE');
+                this.writeString(view, 12, 'fmt ');
+                view.setUint32(16, 16, true);
+                view.setUint16(20, format, true);
+                view.setUint16(22, numberOfChannels, true);
+                view.setUint32(24, sampleRate, true);
+                view.setUint32(28, sampleRate * blockAlign, true);
+                view.setUint16(32, blockAlign, true);
+                view.setUint16(34, bitDepth, true);
+                this.writeString(view, 36, 'data');
+                view.setUint32(40, wavBuffer.length * 2, true);
+                
+                // Write audio data
+                this.floatTo16BitPCM(view, 44, wavBuffer);
+                
+                console.log(`✅ WAV esportato: ${sampleRate}Hz, ${bitDepth}-bit`);
+                
+                return new Blob([view], { type: 'audio/wav' });
+            }
+        }
+
+        // ========== AUDIO ENGINE ==========
+        class AudioEngine {
+            constructor(volumeManager = null) {
+                this.context = null;
+                this.customSounds = {};
+                this.volumeManager = volumeManager;
+                this.eventBus = new EventBus();
+                
+                // Tracking dei nodi audio attivi per evitare sovrapposizioni
+                this.activeNodes = new Map(); // instrumentName -> [gainNode, source/oscillator]
+                
+                // Configurazioni separate per suoni importati (per strumento)
+                this.waveConfigs = new Map(); // instrumentName -> {baseVolume, fadeIntensity, disableEnvelope}
+                this.defaultWaveConfig = {
+                    baseVolume: 1.0,
+                    fadeIntensity: 0.5,
+                    disableEnvelope: false
+                };
+                
+                // Inizializzazione originalSampleRates per consistenza (anche se funzionalità disabilitata)
+                this.originalSampleRates = new Map();
+                
+                this.loadWaveConfigs();
+            }
+
+            setVolumeManager(volumeManager) {
+                this.volumeManager = volumeManager;
+            }
+
+            loadWaveConfigs() {
+                const saved = Storage.load('waveAudioConfigs', {});
+                this.waveConfigs = new Map(Object.entries(saved));
+            }
+
+            saveWaveConfigs() {
+                Storage.save('waveAudioConfigs', Object.fromEntries(this.waveConfigs));
+            }
+
+            getWaveConfig(instrumentName) {
+                if (!this.waveConfigs.has(instrumentName)) {
+                    this.waveConfigs.set(instrumentName, { ...this.defaultWaveConfig });
+                }
+                return this.waveConfigs.get(instrumentName);
+            }
+
+            updateWaveConfig(instrumentName, config) {
+                const currentConfig = this.getWaveConfig(instrumentName);
+                this.waveConfigs.set(instrumentName, { ...currentConfig, ...config });
+                this.saveWaveConfigs();
+            }
+
+            // Metodo legacy per compatibilità (ora delega al metodo specifico)
+            updateWaveConfigs(config) {
+                // Se non specificato uno strumento, usa quello attualmente selezionato
+                const instrumentName = document.getElementById('waveInstrumentSelect')?.value || 'GU';
+                this.updateWaveConfig(instrumentName, config);
+            }
+
+            init() {
+                if (!this.context) {
+                    // Prova prima con sample rate forzato
+                    try {
+                        this.context = new (window.AudioContext || window.webkitAudioContext)({
+                            sampleRate: 44100
+                        });
+                        console.log(`🎧 AudioContext inizializzato con sample rate forzato: ${this.context.sampleRate}Hz`);
+                    } catch (error) {
+                        // Fallback se il browser non supporta sampleRate nel costruttore
+                        console.warn('⚠️ Impossibile forzare sample rate, usando default del browser');
+                        this.context = new (window.AudioContext || window.webkitAudioContext)();
+                        console.log(`🎧 AudioContext inizializzato: ${this.context.sampleRate}Hz`);
+                    }
+                }
+                return this.context;
+            }
+
+            async createDrumSound(frequency, decay, instrumentName) {
+                this.init();
+                
+                // Ferma il suono precedente dello stesso strumento
+                if (instrumentName) {
+                    this.stopPreviousSound(instrumentName);
+                }
+
+                if (this.customSounds[instrumentName]) {
+                    return this.playCustomSound(instrumentName, decay);
+                }
+
+                return this.playSynthSound(frequency, decay, instrumentName);
+            }
+
+            async playSynthSound(frequency, decay, instrumentName = null) {
+                const osc = this.context.createOscillator();
+                const gain = this.context.createGain();
+                
+                const waveform = Storage.load(CONFIG.STORAGE_KEYS.WAVEFORM_TYPE, 'sine');
+                osc.type = waveform;
+                osc.frequency.value = frequency;
+                
+                osc.connect(gain);
+                gain.connect(this.context.destination);
+                
+                this.applyEnvelope(gain, decay, instrumentName, false); // false = synth sound
+                
+                // Traccia il nodo attivo
+                if (instrumentName) {
+                    this.trackActiveNode(instrumentName, gain, osc);
+                }
+                
+                osc.start(this.context.currentTime);
+                osc.stop(this.context.currentTime + decay);
+            }
+
+            async playCustomSound(instrumentName, decay) {
+                const source = this.context.createBufferSource();
+                source.buffer = this.customSounds[instrumentName];
+                const gain = this.context.createGain();
+                
+                source.connect(gain);
+                gain.connect(this.context.destination);
+                
+                this.applyEnvelope(gain, decay, instrumentName, true); // true = imported sound
+                
+                // Traccia il nodo attivo
+                if (instrumentName) {
+                    this.trackActiveNode(instrumentName, gain, source);
+                }
+                
+                source.start(this.context.currentTime);
+            }
+
+            applyEnvelope(gainNode, decay, instrumentName = null, isImportedSound = false) {
+                const now = this.context.currentTime;
+                let baseVolume;
+                
+                if (isImportedSound && instrumentName) {
+                    // Gestione volume per suoni importati con configurazione specifica per strumento
+                    const waveConfig = this.getWaveConfig(instrumentName);
+                    baseVolume = CONFIG.GAIN.DEFAULT * waveConfig.baseVolume;
+                    
+                    // Apply individual instrument volume if available
+                    if (this.volumeManager) {
+                        const instrumentIndex = INSTRUMENTS.findIndex(inst => inst.name === instrumentName);
+                        if (instrumentIndex >= 0) {
+                            const instrumentVolume = this.volumeManager.getVolume(instrumentIndex);
+                            baseVolume *= instrumentVolume;
+                        }
+                    }
+                    
+                    gainNode.gain.setValueAtTime(baseVolume, now);
+                    
+                    // Applica envelope solo se non è disabilitato per questo strumento
+                    if (!waveConfig.disableEnvelope) {
+                        const endVolume = Math.max(CONFIG.GAIN.MIN, baseVolume * waveConfig.fadeIntensity);
+                        gainNode.gain.exponentialRampToValueAtTime(endVolume, now + decay);
+                    }
+                } else {
+                    // Gestione volume per suoni sintetizzati (logica originale)
+                    baseVolume = CONFIG.GAIN.DEFAULT;
+                    
+                    // Apply individual instrument volume if available
+                    if (this.volumeManager && instrumentName) {
+                        const instrumentIndex = INSTRUMENTS.findIndex(inst => inst.name === instrumentName);
+                        if (instrumentIndex >= 0) {
+                            const instrumentVolume = this.volumeManager.getVolume(instrumentIndex);
+                            baseVolume *= instrumentVolume;
+                        }
+                    }
+                    
+                    gainNode.gain.setValueAtTime(baseVolume, now);
+                    gainNode.gain.exponentialRampToValueAtTime(Math.max(CONFIG.GAIN.MIN, baseVolume * 0.01), now + decay);
+                }
+            }
+
+            loadCustomSound(instrumentName, audioBuffer) {
+                // Assicurati che l'AudioContext sia inizializzato
+                this.init();
+                
+                console.log(`🔍 CARICAMENTO SUONO PERSONALIZZATO:`);
+                console.log(`🎧 Buffer: ${audioBuffer.sampleRate}Hz, AudioContext: ${this.context.sampleRate}Hz`);
+                
+                // L'AudioBuffer dovrebbe già avere il sample rate corretto da FileUtils.loadAudioFile
+                if (audioBuffer.sampleRate !== this.context.sampleRate) {
+                    console.warn(`⚠️ Sample rate mismatch inatteso! Buffer: ${audioBuffer.sampleRate}Hz, Context: ${this.context.sampleRate}Hz`);
+                    console.warn(`🔧 Questo potrebbe indicare un problema nel flusso di caricamento.`);
+                    
+                    // Fallback: converte se necessario
+                    const convertedBuffer = this.resampleAudioBuffer(audioBuffer, this.context.sampleRate);
+                    this.customSounds[instrumentName] = convertedBuffer;
+                    console.log(`⚠️ Conversione fallback applicata: ${convertedBuffer.sampleRate}Hz`);
+                } else {
+                    console.log(`✅ Sample rate corretto, caricamento diretto`);
+                    this.customSounds[instrumentName] = audioBuffer;
+                }
+                
+                console.log(`🔊 Suono caricato per ${instrumentName}: ${this.customSounds[instrumentName].sampleRate}Hz, ${this.customSounds[instrumentName].duration.toFixed(3)}s`);
+                this.eventBus.emit('soundLoaded', { instrumentName });
+            }
+
+            // Metodo per convertire sample rate di AudioBuffer esistenti
+            resampleAudioBuffer(sourceBuffer, targetSampleRate) {
+                const sourceSampleRate = sourceBuffer.sampleRate;
+                const numberOfChannels = sourceBuffer.numberOfChannels;
+                
+                // Calcola il ratio di conversione
+                const resampleRatio = targetSampleRate / sourceSampleRate;
+                const newLength = Math.round(sourceBuffer.length * resampleRatio);
+                
+                console.log(`🔄 Resampling AudioBuffer: ${sourceSampleRate}Hz → ${targetSampleRate}Hz`);
+                console.log(`📐 Ratio: ${resampleRatio.toFixed(6)}`);
+                console.log(`📏 Lunghezza: ${sourceBuffer.length} → ${newLength} samples`);
+                
+                // Crea il nuovo buffer
+                const newBuffer = this.context.createBuffer(numberOfChannels, newLength, targetSampleRate);
+                
+                // Resample ogni canale con interpolazione lineare
+                for (let channel = 0; channel < numberOfChannels; channel++) {
+                    const sourceData = sourceBuffer.getChannelData(channel);
+                    const targetData = newBuffer.getChannelData(channel);
+                    
+                    for (let i = 0; i < newLength; i++) {
+                        const sourceIndex = i / resampleRatio;
+                        const index = Math.floor(sourceIndex);
+                        const fraction = sourceIndex - index;
+                        
+                        if (index + 1 < sourceData.length) {
+                            // Interpolazione lineare
+                            targetData[i] = sourceData[index] * (1 - fraction) + 
+                                          sourceData[index + 1] * fraction;
+                        } else {
+                            // Ultimo sample
+                            targetData[i] = sourceData[index] || 0;
+                        }
+                    }
+                }
+                
+                console.log(`✅ Resampling AudioBuffer completato`);
+                return newBuffer;
+            }
+
+            removeCustomSound(instrumentName) {
+                delete this.customSounds[instrumentName];
+                console.log(`🗑️ Suono rimosso per ${instrumentName}`);
+                this.eventBus.emit('soundRemoved', { instrumentName });
+            }
+
+            dispose() {
+                // Ferma tutti i suoni attivi
+                this.activeNodes.forEach(([gainNode, sourceNode], instrumentName) => {
+                    try {
+                        if (sourceNode.stop) {
+                            sourceNode.stop();
+                        }
+                    } catch (error) {
+                        console.warn(`Error stopping sound for ${instrumentName}:`, error);
+                    }
+                });
+                this.activeNodes.clear();
+                
+                if (this.context) {
+                    this.context.close();
+                    this.context = null;
+                }
+                this.customSounds = {};
+            }
+
+            stopPreviousSound(instrumentName) {
+                if (this.activeNodes.has(instrumentName)) {
+                    const [gainNode, sourceNode] = this.activeNodes.get(instrumentName);
+                    
+                    try {
+                        // Sfuma rapidamente il suono precedente (10ms fade-out)
+                        const now = this.context.currentTime;
+                        gainNode.gain.cancelScheduledValues(now);
+                        gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+                        gainNode.gain.linearRampToValueAtTime(0, now + 0.01);
+                        
+                        // Ferma il nodo dopo il fade-out
+                        if (sourceNode.stop) {
+                            sourceNode.stop(now + 0.01);
+                        }
+                    } catch (error) {
+                        console.warn('Error stopping previous sound:', error);
+                    }
+                    
+                    // Rimuovi dalla traccia
+                    this.activeNodes.delete(instrumentName);
+                }
+            }
+
+            trackActiveNode(instrumentName, gainNode, sourceNode) {
+                this.activeNodes.set(instrumentName, [gainNode, sourceNode]);
+                
+                // Auto-cleanup quando il suono finisce
+                const cleanup = () => {
+                    if (this.activeNodes.has(instrumentName)) {
+                        const [currentGain, currentSource] = this.activeNodes.get(instrumentName);
+                        if (currentGain === gainNode && currentSource === sourceNode) {
+                            this.activeNodes.delete(instrumentName);
+                        }
+                    }
+                };
+                
+                if (sourceNode.addEventListener) {
+                    sourceNode.addEventListener('ended', cleanup);
+                } else if (sourceNode.onended !== undefined) {
+                    sourceNode.onended = cleanup;
+                }
+            }
+
+            // Metodo per le anteprime (per AdminPanel)
+            async previewSound(frequency, decay, instrumentName, isImportedSound = false, audioBuffer = null) {
+                this.init();
+                
+                // Ferma anteprime precedenti (usando un ID speciale per preview)
+                const previewId = `preview_${instrumentName}`;
+                this.stopPreviousSound(previewId);
+                
+                let sourceNode, gain;
+                
+                if (isImportedSound && audioBuffer) {
+                    // Preview di suono importato
+                    sourceNode = this.context.createBufferSource();
+                    sourceNode.buffer = audioBuffer;
+                    gain = this.context.createGain();
+                    
+                    sourceNode.connect(gain);
+                    gain.connect(this.context.destination);
+                    
+                    this.applyEnvelope(gain, decay, instrumentName, true);
+                    this.trackActiveNode(previewId, gain, sourceNode);
+                    sourceNode.start(this.context.currentTime);
+                } else {
+                    // Preview di suono sintetizzato
+                    sourceNode = this.context.createOscillator();
+                    gain = this.context.createGain();
+                    
+                    const waveform = document.getElementById('synthWaveformType')?.value || 'sine';
+                    sourceNode.type = waveform;
+                    sourceNode.frequency.value = frequency;
+                    
+                    sourceNode.connect(gain);
+                    gain.connect(this.context.destination);
+                    
+                    this.applyEnvelope(gain, decay, instrumentName, false);
+                    this.trackActiveNode(previewId, gain, sourceNode);
+                    sourceNode.start(this.context.currentTime);
+                    sourceNode.stop(this.context.currentTime + decay);
+                }
+            }
+
+            // ========== GESTIONE SAMPLE RATE ORIGINALI ==========
+            loadOriginalSampleRates() {
+                // Metodo disabilitato - funzionalità rimossa
+                // const saved = Storage.load('originalSampleRates', {});
+                // this.originalSampleRates = new Map(Object.entries(saved));
+            }
+
+            saveOriginalSampleRates() {
+                // Metodo disabilitato - funzionalità rimossa
+                // Storage.save('originalSampleRates', Object.fromEntries(this.originalSampleRates));
+            }
+
+            setOriginalSampleRate(instrumentName, sampleRate) {
+                // Metodo disabilitato - funzionalità rimossa
+                console.log(`⚠️ setOriginalSampleRate chiamato ma ignorato (funzionalità rimossa)`);
+            }
+
+            getOriginalSampleRate(instrumentName) {
+                // Ritorna sempre il sample rate dell'AudioContext corrente
+                return this.context?.sampleRate || 44100;
+            }
+
+            removeOriginalSampleRate(instrumentName) {
+                // Metodo disabilitato - funzionalità rimossa
+                console.log(`⚠️ removeOriginalSampleRate chiamato ma ignorato (funzionalità rimossa)`);
+            }
+        }
+
+        // ========== PATTERN MANAGEMENT ==========
+        class PatternManager {
+            constructor(player = null, volumeManager = null) {
+                this.numSteps = CONFIG.STEPS.DEFAULT;
+                this.patterns = INSTRUMENTS.map(() => Array(20).fill(0));
+                this.activeInstruments = new Array(INSTRUMENTS.length).fill(true);
+                this.customPatterns = Storage.load(CONFIG.STORAGE_KEYS.CUSTOM_PATTERNS, {});
+                this.eventBus = new EventBus();
+                this.player = player;
+                this.volumeManager = volumeManager;
+            }
+
+            setDependencies(player, volumeManager) {
+                this.player = player;
+                this.volumeManager = volumeManager;
+            }
+
+            getCurrentState() {
+                return {
+                    pattern: this.patterns,
+                    activeInstruments: this.activeInstruments,
+                    numSteps: this.numSteps
+                };
+            }
+
+            setNumSteps(steps) {
+                this.numSteps = Math.max(CONFIG.STEPS.MIN, Math.min(CONFIG.STEPS.MAX, steps));
+                this.eventBus.emit('stepsChanged', { steps: this.numSteps });
+                return this.numSteps;
+            }
+
+            toggleInstrument(index, state) {
+                if (index >= 0 && index < this.activeInstruments.length) {
+                    this.activeInstruments[index] = state;
+                    this.eventBus.emit('instrumentToggled', { index, state });
+                }
+            }
+
+            toggleStep(instrumentIndex, stepIndex) {
+                if (this.isValidStep(instrumentIndex, stepIndex)) {
+                    this.patterns[instrumentIndex][stepIndex] = !this.patterns[instrumentIndex][stepIndex];
+                    const state = this.patterns[instrumentIndex][stepIndex];
+                    this.eventBus.emit('stepToggled', { instrumentIndex, stepIndex, state });
+                    return state;
+                }
+                return false;
+            }
+
+            isValidStep(instrumentIndex, stepIndex) {
+                return instrumentIndex >= 0 && instrumentIndex < this.patterns.length &&
+                       stepIndex >= 0 && stepIndex < this.numSteps;
+            }
+
+            loadPattern(patternIndex) {
+                if (PRESET_PATTERNS[patternIndex]) {
+                    const pattern = PRESET_PATTERNS[patternIndex];
+                    this.numSteps = pattern[0].length;
+                    
+                    this.patterns = pattern.map(row => {
+                    const newRow = Array(20).fill(0);
+                        row.forEach((value, index) => newRow[index] = value);
+                        return newRow;
+                    });
+                    
+                    this.eventBus.emit('patternLoaded', { patternIndex, numSteps: this.numSteps });
+                    return true;
+                }
+                return false;
+            }
+
+            loadCustomPattern(name) {
+                const savedData = this.customPatterns[name];
+                if (!savedData?.pattern) return false;
+
+                this.numSteps = savedData.pattern[0].length;
+                this.patterns = savedData.pattern.map(row => {
+                    const newRow = Array(20).fill(0);
+                    row.forEach((value, index) => newRow[index] = value);
+                    return newRow;
+                });
+                
+                if (savedData.activeInstruments) {
+                    this.activeInstruments = [...savedData.activeInstruments];
+                }
+
+                // Load tempo if available and player is set
+                if (savedData.tempo && this.player && typeof this.player.setTempo === 'function') {
+                    this.player.setTempo(savedData.tempo);
+                    // Update UI elements
+                    const tempoSlider = document.getElementById('tempoSlider');
+                    const tempoValue = document.getElementById('tempoValue');
+                    if (tempoSlider) tempoSlider.value = savedData.tempo;
+                    if (tempoValue) tempoValue.textContent = `${savedData.tempo} BPM`;
+                }
+
+                // Load volumes if available and volumeManager is set
+                if (savedData.volumes && this.volumeManager && Array.isArray(savedData.volumes)) {
+                    savedData.volumes.forEach((volume, index) => {
+                        if (index < INSTRUMENTS.length && typeof volume === 'number') {
+                            this.volumeManager.setVolume(index, volume);
+                        }
+                    });
+                }
+
+                this.eventBus.emit('customPatternLoaded', { name, numSteps: this.numSteps });
+                return true;
+            }
+
+            saveCustomPattern(name) {
+                if (!name.trim()) return false;
+
+                const patternData = {
+                    pattern: this.patterns.map(row => row.slice(0, this.numSteps)),
+                    activeInstruments: [...this.activeInstruments]
+                };
+
+                // Add tempo if player is available
+                if (this.player && typeof this.player.tempo === 'number') {
+                    patternData.tempo = this.player.tempo;
+                }
+
+                // Add volumes if volumeManager is available
+                if (this.volumeManager && typeof this.volumeManager.getAllVolumes === 'function') {
+                    patternData.volumes = this.volumeManager.getAllVolumes();
+                }
+
+                this.customPatterns[name] = patternData;
+
+                Storage.save(CONFIG.STORAGE_KEYS.CUSTOM_PATTERNS, this.customPatterns);
+                this.eventBus.emit('patternSaved', { name });
+                return true;
+            }
+
+            deleteCustomPattern(name) {
+                if (this.customPatterns[name]) {
+                    delete this.customPatterns[name];
+                    Storage.save(CONFIG.STORAGE_KEYS.CUSTOM_PATTERNS, this.customPatterns);
+                    this.eventBus.emit('patternDeleted', { name });
+                    return true;
+                }
+                return false;
+            }
+
+            resetPattern() {
+                // Reset pattern matrix
+                this.patterns = INSTRUMENTS.map(() => Array(20).fill(0));
+                
+                // Reactivate all instruments
+                this.activeInstruments.fill(true);
+                
+                // Reset steps to default (16)
+                this.numSteps = CONFIG.STEPS.DEFAULT;
+                
+                this.eventBus.emit('patternReset');
+                this.eventBus.emit('stepsChanged', { steps: this.numSteps });
+                this.eventBus.emit('fullReset'); // New event for complete reset
+            }
+
+            getCustomPatternNames() {
+                return Object.keys(this.customPatterns);
+            }
+        }
+
+        // ========== VOLUME MANAGEMENT ==========
+        class VolumeManager {
+            constructor() {
+                this.volumes = new Array(INSTRUMENTS.length).fill(0.5); // Default 50%
+                this.eventBus = new EventBus();
+                this.loadVolumes();
+            }
+
+            setVolume(instrumentIndex, volume) {
+                if (instrumentIndex >= 0 && instrumentIndex < this.volumes.length) {
+                    this.volumes[instrumentIndex] = Math.max(0, Math.min(1, volume));
+                    this.eventBus.emit('volumeChanged', { 
+                        instrumentIndex, 
+                        volume: this.volumes[instrumentIndex] 
+                    });
+                    this.saveVolumes();
+                    return this.volumes[instrumentIndex];
+                }
+                return 0;
+            }
+
+            getVolume(instrumentIndex) {
+                if (instrumentIndex >= 0 && instrumentIndex < this.volumes.length) {
+                    return this.volumes[instrumentIndex];
+                }
+                return 0.5;
+            }
+
+            getAllVolumes() {
+                return [...this.volumes];
+            }
+
+            resetVolumes() {
+                this.volumes.fill(0.5);
+                this.eventBus.emit('volumesReset');
+                this.saveVolumes();
+            }
+
+            saveVolumes() {
+                Storage.save('instrumentVolumes', this.volumes);
+            }
+
+            loadVolumes() {
+                const saved = Storage.load('instrumentVolumes');
+                if (saved && Array.isArray(saved) && saved.length === INSTRUMENTS.length) {
+                    this.volumes = [...saved];
+                } else {
+                    this.volumes = new Array(INSTRUMENTS.length).fill(0.5);
+                }
+            }
+        }
+
+        // ========== PLAYER ENGINE ==========
+        class Player {
+            constructor(audioEngine, patternManager) {
+                this.audioEngine = audioEngine;
+                this.patternManager = patternManager;
+                this.isPlaying = false;
+                this.currentStep = 0;
+                this.tempo = CONFIG.TEMPO.DEFAULT;
+                this.intervalId = null;
+                this.eventBus = new EventBus();
+            }
+
+            play() {
+                if (!this.isPlaying) {
+                    this.isPlaying = true;
+                    const interval = this.getStepInterval();
+                    this.intervalId = setInterval(() => this.playStep(), interval);
+                    this.eventBus.emit('playStarted');
+                }
+            }
+
+            stop() {
+                if (this.isPlaying) {
+                    this.isPlaying = false;
+                    clearInterval(this.intervalId);
+                    this.intervalId = null;
+                    this.currentStep = 0;
+                    this.eventBus.emit('playStopped');
+                }
+            }
+
+            toggle() {
+                this.isPlaying ? this.stop() : this.play();
+            }
+
+            setTempo(newTempo) {
+                this.tempo = Math.max(CONFIG.TEMPO.MIN, Math.min(CONFIG.TEMPO.MAX, newTempo));
+                
+                if (this.isPlaying) {
+                    clearInterval(this.intervalId);
+                    const interval = this.getStepInterval();
+                    this.intervalId = setInterval(() => this.playStep(), interval);
+                }
+                
+                this.eventBus.emit('tempoChanged', { tempo: this.tempo });
+            }
+
+            getStepInterval() {
+                return (60 / this.tempo) * 1000 / 2; // 16th notes
+            }
+
+            playStep() {
+                this.eventBus.emit('stepPlayed', { currentStep: this.currentStep });
+                
+                const state = this.patternManager.getCurrentState();
+                INSTRUMENTS.forEach((instrument, i) => {
+                    if (state.pattern[i][this.currentStep] && state.activeInstruments[i]) {
+                        this.audioEngine.createDrumSound(instrument.freq, instrument.decay, instrument.name);
+                    }
+                });
+
+                this.currentStep = (this.currentStep + 1) % state.numSteps;
+            }
+        }
+
+        // ========== UI MANAGEMENT ==========
+        class UIManager {
+            constructor(patternManager, player, volumeManager) {
+                this.patternManager = patternManager;
+                this.player = player;
+                this.volumeManager = volumeManager;
+                this.matrixElement = document.getElementById('patternMatrix');
+                this.init();
+            }
+
+            init() {
+                this.bindEvents();
+                this.updateMatrix();
+                this.updateControls();
+            }
+
+            bindEvents() {
+                // Pattern Manager events
+                this.patternManager.eventBus.on('stepsChanged', (data) => {
+                    this.updateMatrix();
+                    this.updateStepsDisplay(data.steps);
+                });
+
+                this.patternManager.eventBus.on('patternLoaded', () => {
+                    this.updateMatrix();
+                    this.updateStepsDisplay(this.patternManager.numSteps);
+                });
+
+                this.patternManager.eventBus.on('customPatternLoaded', () => {
+                    this.updateMatrix();
+                    this.updateStepsDisplay(this.patternManager.numSteps);
+                });
+
+                this.patternManager.eventBus.on('patternReset', () => {
+                    this.updateMatrix();
+                });
+
+                this.patternManager.eventBus.on('fullReset', () => {
+                    // Update steps slider after complete reset
+                    document.getElementById('stepsSlider').value = CONFIG.STEPS.DEFAULT;
+                });
+
+                this.patternManager.eventBus.on('stepToggled', (data) => {
+                    this.updateStep(data.instrumentIndex, data.stepIndex, data.state);
+                });
+
+                this.patternManager.eventBus.on('instrumentToggled', (data) => {
+                    this.updateInstrumentState(data.index, data.state);
+                });
+
+                // Player events
+                this.player.eventBus.on('stepPlayed', (data) => {
+                    this.highlightCurrentStep(data.currentStep);
+                });
+
+                // Volume Manager events
+                this.volumeManager.eventBus.on('volumeChanged', (data) => {
+                    this.updateVolumeDisplay(data.instrumentIndex, data.volume);
+                });
+
+                this.volumeManager.eventBus.on('volumesReset', () => {
+                    this.updateMatrix();
+                });
+
+                // UI Controls
+                this.bindControlEvents();
+            }
+
+            bindControlEvents() {
+                // Play/Stop
+                document.getElementById('playBtn').addEventListener('click', () => {
+                    this.player.toggle();
+                });
+
+                // Pattern selection
+                document.getElementById('patternSelect').addEventListener('change', (e) => {
+                    this.patternManager.loadPattern(parseInt(e.target.value));
+                });
+
+                // Reset
+                document.getElementById('resetBtn').addEventListener('click', () => {
+                    resetPattern();
+                });
+
+                // Tempo
+                document.getElementById('tempoSlider').addEventListener('input', (e) => {
+                    const tempo = parseInt(e.target.value);
+                    this.player.setTempo(tempo);
+                    document.getElementById('tempoValue').textContent = `${tempo} BPM`;
+                });
+
+                // Steps
+                document.getElementById('stepsSlider').addEventListener('input', (e) => {
+                    const steps = parseInt(e.target.value);
+                    this.patternManager.setNumSteps(steps);
+                });
+            }
+
+            updateMatrix() {
+                this.matrixElement.innerHTML = '';
+                const state = this.patternManager.getCurrentState();
+                
+                INSTRUMENTS.forEach((instrument, i) => {
+                    const row = this.createInstrumentRow(instrument, i, state);
+                    this.matrixElement.appendChild(row);
+                });
+            }
+
+            createInstrumentRow(instrument, index, state) {
+                const row = document.createElement('div');
+                row.className = 'instrument-row';
+                
+                // Controls
+                const controls = this.createInstrumentControls(instrument, index, state.activeInstruments[index]);
+                row.appendChild(controls);
+
+                // Steps
+                const stepRow = this.createStepRow(index, state);
+                row.appendChild(stepRow);
+
+                // Volume control
+                const volumeControl = this.createVolumeControl(index);
+                row.appendChild(volumeControl);
+
+                return row;
+            }
+
+            createInstrumentControls(instrument, index, isActive) {
+                const controls = document.createElement('div');
+                controls.className = 'instrument-controls';
+
+                // Toggle switch
+                const toggleLabel = document.createElement('label');
+                toggleLabel.className = 'toggle-switch';
+                
+                const toggleInput = document.createElement('input');
+                toggleInput.type = 'checkbox';
+                toggleInput.checked = isActive;
+                toggleInput.addEventListener('change', (e) => {
+                    this.patternManager.toggleInstrument(index, e.target.checked);
+                });
+                
+                const toggleSlider = document.createElement('span');
+                toggleSlider.className = 'toggle-slider';
+                
+                toggleLabel.appendChild(toggleInput);
+                toggleLabel.appendChild(toggleSlider);
+                
+                // Instrument name
+                const name = document.createElement('div');
+                name.className = 'instrument-name' + (isActive ? '' : ' disabled');
+                name.textContent = instrument.name;
+                
+                controls.appendChild(toggleLabel);
+                controls.appendChild(name);
+
+                return controls;
+            }
+
+            createVolumeControl(instrumentIndex) {
+                const volumeControl = document.createElement('div');
+                volumeControl.className = 'volume-control';
+
+                // Volume slider
+                const volumeSlider = document.createElement('input');
+                volumeSlider.type = 'range';
+                volumeSlider.className = 'volume-slider';
+                volumeSlider.min = '0';
+                volumeSlider.max = '100';
+                volumeSlider.step = '1';
+                
+                // Accessibility attributes
+                const instrumentName = INSTRUMENTS[instrumentIndex]?.name || 'Unknown';
+                volumeSlider.setAttribute('aria-label', `Volume for ${instrumentName}`);
+                volumeSlider.setAttribute('aria-valuemin', '0');
+                volumeSlider.setAttribute('aria-valuemax', '100');
+                volumeSlider.setAttribute('role', 'slider');
+                
+                // Get current volume or set default to 50%
+                const currentVolume = this.volumeManager.getVolume(instrumentIndex);
+                const displayVolume = Math.round(currentVolume * 100);
+                volumeSlider.value = displayVolume;
+                volumeSlider.setAttribute('aria-valuenow', displayVolume);
+                volumeSlider.setAttribute('aria-valuetext', displayVolume + ' percent');
+
+                // Volume value display
+                const volumeValue = document.createElement('span');
+                volumeValue.className = 'volume-value';
+                volumeValue.textContent = displayVolume + '%';
+                volumeValue.setAttribute('aria-hidden', 'true'); // Screen readers will use the slider's aria attributes
+
+                // Event listeners for real-time updates
+                const updateVolume = (e) => {
+                    try {
+                        const newValue = parseInt(e.target.value, 10);
+                        const volume = newValue / 100;
+                        
+                        if (isNaN(newValue) || newValue < 0 || newValue > 100) {
+                            console.warn('Invalid volume value:', newValue);
+                            return;
+                        }
+                        
+                        this.volumeManager.setVolume(instrumentIndex, volume);
+                        volumeValue.textContent = newValue + '%';
+                        
+                        // Update accessibility attributes
+                        volumeSlider.setAttribute('aria-valuenow', newValue);
+                        volumeSlider.setAttribute('aria-valuetext', newValue + ' percent');
+                    } catch (error) {
+                        console.error('Error updating volume:', error);
+                    }
+                };
+
+                volumeSlider.addEventListener('input', updateVolume);
+                volumeSlider.addEventListener('change', updateVolume);
+
+                volumeControl.appendChild(volumeSlider);
+                volumeControl.appendChild(volumeValue);
+
+                return volumeControl;
+            }
+
+            createStepRow(instrumentIndex, state) {
+                const stepRow = document.createElement('div');
+                stepRow.className = 'step-row';
+
+                for (let j = 0; j < state.numSteps; j++) {
+                    const step = document.createElement('div');
+                    step.className = 'step' + (state.pattern[instrumentIndex][j] ? ' active' : '');
+                    if ((j + 1) % 4 === 0 && j !== state.numSteps - 1) {
+                        step.className += ' group-end';
+                    }
+                    step.dataset.instrument = instrumentIndex;
+                    step.dataset.step = j;
+                    step.addEventListener('click', (e) => {
+                        const instIndex = parseInt(e.target.dataset.instrument);
+                        const stepIndex = parseInt(e.target.dataset.step);
+                        this.patternManager.toggleStep(instIndex, stepIndex);
+                    });
+                    stepRow.appendChild(step);
+                }
+
+                return stepRow;
+            }
+
+            updateStep(instrumentIndex, stepIndex, isActive) {
+                const step = this.matrixElement.querySelector(
+                    `[data-instrument="${instrumentIndex}"][data-step="${stepIndex}"]`
+                );
+                if (step) {
+                    step.classList.toggle('active', isActive);
+                }
+            }
+
+            updateInstrumentState(index, state) {
+                const row = this.matrixElement.children[index];
+                if (row) {
+                    const name = row.querySelector('.instrument-name');
+                    name.classList.toggle('disabled', !state);
+                }
+            }
+
+            updateVolumeDisplay(instrumentIndex, volume) {
+                const row = this.matrixElement.children[instrumentIndex];
+                if (row) {
+                    const volumeSlider = row.querySelector('.volume-slider');
+                    const volumeValue = row.querySelector('.volume-value');
+                    
+                    const displayVolume = Math.round(volume * 100);
+                    
+                    if (volumeSlider) {
+                        volumeSlider.value = displayVolume;
+                    }
+                    
+                    if (volumeValue) {
+                        volumeValue.textContent = displayVolume + '%';
+                    }
+                }
+            }
+
+            updateStepsDisplay(steps) {
+                document.getElementById('stepsValue').textContent = `${steps} Steps`;
+                document.getElementById('stepsSlider').value = steps;
+            }
+
+            highlightCurrentStep(step) {
+                const currentSteps = this.matrixElement.querySelectorAll('.step.current');
+                currentSteps.forEach(s => s.classList.remove('current'));
+                
+                const newCurrentSteps = this.matrixElement.querySelectorAll(`[data-step="${step}"]`);
+                newCurrentSteps.forEach(s => s.classList.add('current'));
+            }
+
+            updateControls() {
+                this.updateStepsDisplay(this.patternManager.numSteps);
+                document.getElementById('tempoValue').textContent = `${this.player.tempo} BPM`;
+            }
+        }
+
+        // ========== INITIALIZATION ==========
+        const volumeManager = new VolumeManager();
+        const audioEngine = new AudioEngine(volumeManager);
+        const patternManager = new PatternManager();
+        const player = new Player(audioEngine, patternManager);
+        const uiManager = new UIManager(patternManager, player, volumeManager);
+
+        // Set dependencies for PatternManager
+        patternManager.setDependencies(player, volumeManager);
+
+        // Load initial pattern
+        patternManager.loadPattern(0);
+
+        // ========== LEGACY SUPPORT FOR EXISTING FEATURES ==========
+        // Keep these variables for backwards compatibility with existing code
+        let audioContext = audioEngine.context;
+        let isPlaying = player.isPlaying;
+        let currentStep = player.currentStep;
+        let intervalId = player.intervalId;
+        let numSteps = patternManager.numSteps;
+        const instruments = INSTRUMENTS;
+        const presetPatterns = PRESET_PATTERNS;
+        let instrumentPatterns = patternManager.patterns;
+        let activeInstruments = patternManager.activeInstruments;
+        let customPatterns = patternManager.customPatterns;
+        let instrumentVolumes = volumeManager.getAllVolumes();
+
+        // Legacy functions for existing code
+        function createDrumSound(frequency, decay, instrumentName) {
+            return audioEngine.createDrumSound(frequency, decay, instrumentName);
+        }
+
+        function loadPattern(patternIndex) {
+            return patternManager.loadPattern(patternIndex);
+        }
+
+        function toggleStep(e) {
+            const instrumentIndex = parseInt(e.target.dataset.instrument);
+            const stepIndex = parseInt(e.target.dataset.step);
+            patternManager.toggleStep(instrumentIndex, stepIndex);
+        }
+
+        function resetPattern() {
+            // Ask for confirmation
+            if (!confirm('Sei sicuro di voler resettare tutto? Questo cancellerà il pattern corrente, resetterà tutti i volumi al 50%, il tempo a 120 BPM e riabiliterà tutti gli strumenti.')) {
+                return;
+            }
+            
+            // Stop playback if active
+            if (player.isPlaying) {
+                player.stop();
+            }
+            
+            // Reset pattern and instruments (handled by PatternManager)
+            patternManager.resetPattern();
+            
+            // Reset volumes to 50%
+            volumeManager.resetVolumes();
+            
+            // Reset tempo to default
+            player.setTempo(CONFIG.TEMPO.DEFAULT);
+            document.getElementById('tempoSlider').value = CONFIG.TEMPO.DEFAULT;
+            document.getElementById('tempoValue').textContent = `${CONFIG.TEMPO.DEFAULT} BPM`;
+            
+            // Update UI to reflect all changes
+            uiManager.updateMatrix();
+            uiManager.updateStepsDisplay(CONFIG.STEPS.DEFAULT);
+            
+            console.log('Complete reset performed: pattern, instruments, volumes, tempo, and steps');
+        }
+
+        function initMatrix() {
+            uiManager.updateMatrix();
+        }
+
+        function playStep() {
+            player.playStep();
+        }
+
+        function saveCurrentPattern() {
+            const name = document.getElementById('patternName').value.trim();
+            if (!name) {
+                alert('Inserisci un nome per il pattern');
+                return;
+            }
+
+            // ========== SALVA CONFIGURAZIONE COMPLETA DEI SUONI ==========
+            console.log(`📀 Salvando pattern "${name}" con configurazione completa...`);
+            
+            // Salva la configurazione completa dei suoni con lo stesso nome del pattern
+            adminPanel.soundConfigs[name] = {
+                // Parametri strumenti sintetizzati (freq, decay per ogni strumento)
+                instruments: JSON.parse(JSON.stringify(INSTRUMENTS)),
+                
+                // Tipo di waveform globale (sine, square, sawtooth, triangle)
+                waveformType: document.getElementById('synthWaveformType').value,
+                
+                // Configurazioni wave specifiche per ogni strumento importato
+                waveConfigs: Object.fromEntries(audioEngine.waveConfigs),
+                
+                // Audio buffer dei suoni personalizzati caricati
+                customSounds: {...adminPanel.customSounds},
+                originalAudioFiles: {...adminPanel.originalAudioFiles} // Include file originali
+            };
+            
+            // Salva le configurazioni su localStorage
+            Storage.save(CONFIG.STORAGE_KEYS.SOUND_CONFIGS, adminPanel.soundConfigs);
+            console.log(`🔧 Configurazione suoni salvata: ${Object.keys(adminPanel.soundConfigs[name]).length} parametri`);
+
+            // ========== SALVA PATTERN COMPLETO CON TUTTI I PARAMETRI ==========
+            
+            // La funzione PatternManager.saveCustomPattern già cattura:
+            // - Pattern matrix (strumenti x steps)
+            // - Strumenti attivi/disattivi
+            // - Numero di steps
+            // - Tempo corrente
+            // - Volumi individuali per strumento
+            
+            if (patternManager.saveCustomPattern(name)) {
+                // ========== AGGIORNA INTERFACCE ==========
+                updateCustomPatternList();
+                adminPanel.updateConfigList();
+                document.getElementById('patternName').value = '';
+                
+                // ========== LOGGING DETTAGLIATO ==========
+                const savedPattern = patternManager.customPatterns[name];
+                const savedConfig = adminPanel.soundConfigs[name];
+                
+                console.log(`✅ Pattern "${name}" salvato completamente:`);
+                console.log(`📊 Pattern Matrix: ${savedPattern.pattern.length} strumenti x ${savedPattern.pattern[0].length} steps`);
+                console.log(`🎵 Tempo: ${savedPattern.tempo} BPM`);
+                console.log(`🔊 Volumi: [${savedPattern.volumes.map(v => Math.round(v*100) + '%').join(', ')}]`);
+                console.log(`🎛️ Strumenti attivi: ${savedPattern.activeInstruments.filter(Boolean).length}/${savedPattern.activeInstruments.length}`);
+                console.log(`🎧 Audio personalizzati: ${Object.keys(savedConfig.customSounds).length} file`);
+                console.log(`⚙️ Configurazioni wave: ${Object.keys(savedConfig.waveConfigs).length} strumenti`);
+                console.log(`🌊 Waveform: ${savedConfig.waveformType}`);
+                
+                // ========== RIEPILOGO PER L'UTENTE ==========
+                const summary = [
+                    `Pattern "${name}" salvato con successo!`,
+                    ``,
+                    `📊 Dati pattern:`,
+                    `• ${savedPattern.pattern[0].length} steps`,
+                    `• ${savedPattern.tempo} BPM`,
+                    `• ${savedPattern.activeInstruments.filter(Boolean).length}/${savedPattern.activeInstruments.length} strumenti attivi`,
+                    ``,
+                    `🔧 Configurazione suoni:`,
+                    `• Waveform: ${savedConfig.waveformType}`,
+                    `• ${Object.keys(savedConfig.customSounds).length} audio personalizzati`,
+                    `• ${Object.keys(savedConfig.waveConfigs).length} configurazioni wave`,
+                    ``,
+                    `Il pattern include TUTTO quello che stai ascoltando ora!`
+                ].join('\n');
+                
+                alert(summary);
+                
+            } else {
+                alert('Errore durante il salvataggio del pattern');
+                console.error('❌ Errore nel salvataggio del pattern');
+            }
+        }
+
+        function loadCustomPattern(name) {
+            // Carica prima la configurazione se esiste
+            if (adminPanel.soundConfigs[name]) {
+                adminPanel.loadConfig(name);
+                console.log(`Configurazione "${name}" caricata automaticamente con il pattern`);
+            }
+            
+            // Poi carica il pattern
+            if (patternManager.loadCustomPattern(name)) {
+                uiManager.updateMatrix();
+                uiManager.updateStepsDisplay(patternManager.numSteps);
+                
+                // Aggiorna UI admin panel se aperto
+                if (adminPanel.elements.adminPanel.classList.contains('active')) {
+                    adminPanel.updateSynthControls();
+                    adminPanel.loadWaveConfigSettings();
+                }
+            }
+        }
+
+        function deleteCustomPattern(name) {
+            if (confirm(`Are you sure you want to delete the pattern "${name}"?`)) {
+                // Elimina il pattern
+                if (patternManager.deleteCustomPattern(name)) {
+                    // Elimina anche la configurazione associata se esiste
+                    if (adminPanel.soundConfigs[name]) {
+                        delete adminPanel.soundConfigs[name];
+                        Storage.save(CONFIG.STORAGE_KEYS.SOUND_CONFIGS, adminPanel.soundConfigs);
+                        adminPanel.updateConfigList();
+                        console.log(`Configurazione "${name}" eliminata insieme al pattern`);
+                    }
+                    updateCustomPatternList();
+                }
+            }
+        }
+
+        function updateCustomPatternList() {
+            const list = document.getElementById('customPatternList');
+            list.innerHTML = '';
+
+            patternManager.getCustomPatternNames().forEach(name => {
+                const item = document.createElement('div');
+                item.className = 'custom-pattern-item';
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = name;
+                
+                const actions = document.createElement('div');
+                actions.className = 'custom-pattern-actions';
+                
+                const loadBtn = document.createElement('button');
+                loadBtn.textContent = 'Load';
+                loadBtn.onclick = () => loadCustomPattern(name);
+                
+                const exportBtn = document.createElement('button');
+                exportBtn.textContent = 'Export';
+                exportBtn.onclick = () => exportPattern(name);
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.onclick = () => deleteCustomPattern(name);
+                
+                actions.appendChild(loadBtn);
+                actions.appendChild(exportBtn);
+                actions.appendChild(deleteBtn);
+                
+                item.appendChild(nameSpan);
+                item.appendChild(actions);
+                list.appendChild(item);
+            });
+        }
+
+        // Initialize custom pattern list
+                updateCustomPatternList();
+
+        // Add event listener for save button
+        document.getElementById('savePattern').addEventListener('click', saveCurrentPattern);
+
+        // ========== ADMIN PANEL FUNCTIONALITY ==========
+        class AdminPanel {
+            constructor() {
+                this.originalInstruments = JSON.parse(JSON.stringify(INSTRUMENTS));
+                this.customSounds = {};
+                this.soundConfigs = {};
+                this.tempAudioBuffer = null;
+                
+                // ========== CONSERVAZIONE FILE ORIGINALI ==========
+                // Mantiene i file originali per l'export senza alterazioni
+                this.originalAudioFiles = {}; // instrumentName -> Blob del file originale
+                
+                this.initElements();
+                this.bindEvents();
+                this.loadSavedConfigs();
+                this.loadCustomSettings();
+                this.loadWaveConfigSettings();
+            }
+
+            initElements() {
+                this.elements = {
+                    adminIcon: document.querySelector('.admin-icon'),
+                    adminPanel: document.querySelector('.admin-panel'),
+                    overlay: document.querySelector('.overlay'),
+                    closeAdmin: document.querySelector('.close-admin'),
+                    tabButtons: document.querySelectorAll('.tab-button'),
+                    tabContents: document.querySelectorAll('.tab-content'),
+                    
+                    // Synth elements
+                    synthInstrumentSelect: document.getElementById('synthInstrumentSelect'),
+                    synthFreqSlider: document.getElementById('synthFreqSlider'),
+                    synthDecaySlider: document.getElementById('synthDecaySlider'),
+                    synthWaveformType: document.getElementById('synthWaveformType'),
+                    synthPreview: document.getElementById('synthPreview'),
+                    synthApply: document.getElementById('synthApply'),
+                    synthReset: document.getElementById('synthReset'),
+                    
+                    // Wave elements
+                    waveInstrumentSelect: document.getElementById('waveInstrumentSelect'),
+                    waveAudioFile: document.getElementById('waveAudioFile'),
+                    loadAudioBtn: document.getElementById('loadAudioBtn'),
+                    selectedFileName: document.getElementById('selectedFileName'),
+                    wavePreview: document.getElementById('wavePreview'),
+                    waveApply: document.getElementById('waveApply'),
+                    waveReset: document.getElementById('waveReset'),
+                    
+                    // Wave config elements
+                    waveVolumeSlider: document.getElementById('waveVolumeSlider'),
+                    waveFadeSlider: document.getElementById('waveFadeSlider'),
+                    waveDisableEnvelope: document.getElementById('waveDisableEnvelope'),
+                    
+                    // Config elements
+                    configName: document.getElementById('configName'),
+                    saveConfig: document.getElementById('saveConfig'),
+                    configList: document.getElementById('configList'),
+                    importConfig: document.getElementById('importConfig'),
+                    importConfigBtn: document.getElementById('importConfigBtn'),
+                    resetAllConfig: document.getElementById('resetAllConfig')
+                };
+            }
+
+            bindEvents() {
+                // Panel controls
+                this.elements.adminIcon.addEventListener('click', () => this.openPanel());
+                this.elements.closeAdmin.addEventListener('click', () => this.closePanel());
+                this.elements.overlay.addEventListener('click', () => this.closePanel());
+
+        // Tab switching
+                this.elements.tabButtons.forEach(button => {
+                    button.addEventListener('click', () => this.switchTab(button));
+                });
+
+                // Synth controls
+                this.elements.synthInstrumentSelect.addEventListener('change', () => this.updateSynthControls());
+                this.elements.synthFreqSlider.addEventListener('input', () => this.updateSliderValues());
+                this.elements.synthDecaySlider.addEventListener('input', () => this.updateSliderValues());
+                this.elements.synthPreview.addEventListener('click', () => this.previewSynth());
+                this.elements.synthApply.addEventListener('click', () => this.applySynth());
+                this.elements.synthReset.addEventListener('click', () => this.resetSynth());
+
+                // Wave controls
+                this.elements.loadAudioBtn.addEventListener('click', () => this.elements.waveAudioFile.click());
+                this.elements.waveAudioFile.addEventListener('change', (e) => this.handleFileLoad(e));
+                this.elements.waveInstrumentSelect.addEventListener('change', () => this.updateWaveState());
+                this.elements.wavePreview.addEventListener('click', () => this.previewWave());
+                this.elements.waveApply.addEventListener('click', () => this.applyWave());
+                this.elements.waveReset.addEventListener('click', () => this.resetWave());
+
+                // Wave config controls
+                this.elements.waveVolumeSlider.addEventListener('input', () => this.updateWaveConfig());
+                this.elements.waveFadeSlider.addEventListener('input', () => this.updateWaveConfig());
+                this.elements.waveDisableEnvelope.addEventListener('change', () => this.updateWaveConfig());
+
+                // Config controls
+                this.elements.saveConfig.addEventListener('click', () => this.saveConfig());
+                this.elements.importConfigBtn.addEventListener('click', () => this.elements.importConfig.click());
+                this.elements.importConfig.addEventListener('change', (e) => this.handleConfigImport(e));
+                this.elements.resetAllConfig.addEventListener('click', () => this.resetAllConfigurations());
+            }
+
+            openPanel() {
+                this.elements.adminPanel.classList.add('active');
+                this.elements.overlay.classList.add('active');
+            }
+
+            closePanel() {
+                this.elements.adminPanel.classList.remove('active');
+                this.elements.overlay.classList.remove('active');
+            }
+
+            switchTab(activeButton) {
+                this.elements.tabButtons.forEach(btn => btn.classList.remove('active'));
+                this.elements.tabContents.forEach(content => content.classList.remove('active'));
+                
+                activeButton.classList.add('active');
+                const tabId = activeButton.getAttribute('data-tab');
+                document.getElementById(tabId).classList.add('active');
+            }
+
+            updateSynthControls() {
+                const selectedInstrument = INSTRUMENTS.find(i => i.name === this.elements.synthInstrumentSelect.value);
+                if (selectedInstrument) {
+                    this.elements.synthFreqSlider.value = selectedInstrument.freq;
+                    this.elements.synthDecaySlider.value = selectedInstrument.decay;
+                    this.updateSliderValues();
+                }
+            }
+
+            updateWaveConfig() {
+                const instrumentName = this.elements.waveInstrumentSelect.value;
+                const config = {
+                    baseVolume: parseFloat(this.elements.waveVolumeSlider.value),
+                    fadeIntensity: parseFloat(this.elements.waveFadeSlider.value),
+                    disableEnvelope: !this.elements.waveDisableEnvelope.checked
+                };
+                
+                audioEngine.updateWaveConfig(instrumentName, config);
+                this.updateWaveConfigDisplay();
+            }
+
+            updateWaveConfigDisplay() {
+                const instrumentName = this.elements.waveInstrumentSelect.value;
+                const config = audioEngine.getWaveConfig(instrumentName);
+                
+                // Update display values
+                document.querySelector('.wave-volume-value').textContent = `${config.baseVolume}x`;
+                document.querySelector('.wave-fade-value').textContent = config.fadeIntensity;
+                
+                // Update controls if needed
+                this.elements.waveVolumeSlider.value = config.baseVolume;
+                this.elements.waveFadeSlider.value = config.fadeIntensity;
+                this.elements.waveDisableEnvelope.checked = !config.disableEnvelope;
+            }
+
+            loadWaveConfigSettings() {
+                // Load saved wave config and update UI (inverted logic: checked = envelope enabled)
+                const instrumentName = this.elements.waveInstrumentSelect.value;
+                const config = audioEngine.getWaveConfig(instrumentName);
+                this.elements.waveVolumeSlider.value = config.baseVolume;
+                this.elements.waveFadeSlider.value = config.fadeIntensity;
+                this.elements.waveDisableEnvelope.checked = !config.disableEnvelope;
+                this.updateWaveConfigDisplay();
+            }
+
+            updateSliderValues() {
+                document.querySelector('.freq-value').textContent = `${this.elements.synthFreqSlider.value} Hz`;
+                document.querySelector('.decay-value').textContent = `${this.elements.synthDecaySlider.value} s`;
+            }
+
+            previewSynth() {
+                const instrumentName = this.elements.synthInstrumentSelect.value;
+                const frequency = parseFloat(this.elements.synthFreqSlider.value);
+                const decay = parseFloat(this.elements.synthDecaySlider.value);
+                
+                audioEngine.previewSound(frequency, decay, instrumentName, false);
+            }
+
+            applySynth() {
+                const selectedInstrument = INSTRUMENTS.find(i => i.name === this.elements.synthInstrumentSelect.value);
+                if (selectedInstrument) {
+                    selectedInstrument.freq = parseFloat(this.elements.synthFreqSlider.value);
+                    selectedInstrument.decay = parseFloat(this.elements.synthDecaySlider.value);
+                    Storage.save(CONFIG.STORAGE_KEYS.WAVEFORM_TYPE, this.elements.synthWaveformType.value);
+                    Storage.save(CONFIG.STORAGE_KEYS.CUSTOM_INSTRUMENTS, INSTRUMENTS);
+                    alert('Modifiche applicate con successo!');
+                }
+            }
+
+            resetSynth() {
+                if (confirm('Sei sicuro di voler ripristinare le impostazioni originali?')) {
+                    const selectedName = this.elements.synthInstrumentSelect.value;
+                    const originalInstrument = this.originalInstruments.find(i => i.name === selectedName);
+                    const currentInstrument = INSTRUMENTS.find(i => i.name === selectedName);
+                    
+                    if (originalInstrument && currentInstrument) {
+                        currentInstrument.freq = originalInstrument.freq;
+                        currentInstrument.decay = originalInstrument.decay;
+                        
+                        this.elements.synthFreqSlider.value = originalInstrument.freq;
+                        this.elements.synthDecaySlider.value = originalInstrument.decay;
+                        this.elements.synthWaveformType.value = 'sine';
+                        
+                        this.updateSliderValues();
+                        alert('Impostazioni ripristinate!');
+                    }
+                }
+            }
+
+            async handleFileLoad(e) {
+                const file = e.target.files[0];
+                if (!file) {
+                    this.resetFileState();
+                return;
+            }
+
+                this.elements.selectedFileName.textContent = 'Caricamento in corso...';
+                this.setButtonsEnabled(false);
+
+                try {
+                    audioEngine.init();
+                    
+                    // ========== CONSERVA FILE ORIGINALE ==========
+                    // Salva il file originale per export futuro senza alterazioni
+                    const instrumentName = this.elements.waveInstrumentSelect.value;
+                    this.originalAudioFiles[instrumentName] = new Blob([await file.arrayBuffer()], { type: file.type });
+                    console.log(`💾 File originale conservato per ${instrumentName}: ${file.name} (${file.size} bytes)`);
+                    
+                    // ========== PROCESSA PER PLAYBACK ==========
+                    this.tempAudioBuffer = await FileUtils.loadAudioFile(file, audioEngine.context);
+                    
+                    this.elements.selectedFileName.textContent = file.name;
+                    this.elements.wavePreview.disabled = false;
+                    this.elements.waveApply.disabled = false;
+            } catch (err) {
+                    alert('Errore nel caricamento del file audio.');
+                console.error(err);
+                    this.resetFileState('Errore nel caricamento');
+                } finally {
+                    this.elements.loadAudioBtn.disabled = false;
+                }
+            }
+
+            resetFileState(message = 'Nessun file selezionato') {
+                this.elements.selectedFileName.textContent = message;
+                this.elements.wavePreview.disabled = true;
+                this.elements.waveApply.disabled = true;
+                this.tempAudioBuffer = null;
+            }
+
+            setButtonsEnabled(enabled) {
+                this.elements.loadAudioBtn.disabled = !enabled;
+                this.elements.wavePreview.disabled = !enabled;
+                this.elements.waveApply.disabled = !enabled;
+            }
+
+            updateWaveState() {
+                const instrumentName = this.elements.waveInstrumentSelect.value;
+                const hasCustomSound = this.customSounds[instrumentName];
+                
+                this.elements.waveAudioFile.value = '';
+                this.tempAudioBuffer = null;
+            
+                if (hasCustomSound) {
+                    this.elements.selectedFileName.textContent = 'File audio salvato';
+                    this.elements.wavePreview.disabled = false;
+                } else {
+                    this.resetFileState();
+                }
+                this.elements.waveApply.disabled = true;
+                
+                // Carica la configurazione specifica per questo strumento
+                this.loadWaveConfigSettings();
+            }
+
+            previewWave() {
+                const instrumentName = this.elements.waveInstrumentSelect.value;
+                let audioBuffer = null;
+                
+                if (this.tempAudioBuffer) {
+                    audioBuffer = this.tempAudioBuffer;
+                } else if (this.customSounds[instrumentName]) {
+                    audioBuffer = this.customSounds[instrumentName];
+                } else {
+                    alert('Nessun file audio caricato per questo strumento.');
+                    return;
+                }
+                
+                audioEngine.previewSound(0, 0.5, instrumentName, true, audioBuffer);
+            }
+
+            applyWave() {
+                if (!this.tempAudioBuffer) {
+                    alert('Nessun file audio da applicare.');
+                    return;
+                }
+
+                const instrumentName = this.elements.waveInstrumentSelect.value;
+                this.customSounds[instrumentName] = this.tempAudioBuffer;
+                audioEngine.loadCustomSound(instrumentName, this.tempAudioBuffer);
+                
+                this.elements.waveAudioFile.value = '';
+                this.elements.selectedFileName.textContent = 'File audio salvato';
+                this.tempAudioBuffer = null;
+                this.elements.waveApply.disabled = true;
+                this.elements.wavePreview.disabled = false;
+                
+                alert('File audio applicato con successo!');
+            }
+
+            resetWave() {
+                if (confirm('Sei sicuro di voler rimuovere il file audio e resettare i parametri per questo strumento?')) {
+                    const instrumentName = this.elements.waveInstrumentSelect.value;
+                    
+                    // Rimuovi da tutte le strutture dati
+                    delete this.customSounds[instrumentName];
+                    delete this.originalAudioFiles[instrumentName]; // Rimuovi anche file originale
+                    audioEngine.removeCustomSound(instrumentName);
+                    
+                    // Reset wave config parameters to defaults for this instrument only
+                    audioEngine.updateWaveConfig(instrumentName, {
+                        baseVolume: 1.0,
+                        fadeIntensity: 0.5,
+                        disableEnvelope: false
+                    });
+                    
+                    this.resetFileState();
+                    this.elements.waveAudioFile.value = '';
+                    this.loadWaveConfigSettings(); // Update UI with default values
+                    
+                    alert('File audio rimosso e parametri ripristinati ai valori di default!');
+                }
+            }
+
+            loadCustomSettings() {
+                const savedInstruments = Storage.load(CONFIG.STORAGE_KEYS.CUSTOM_INSTRUMENTS);
+                const savedWaveform = Storage.load(CONFIG.STORAGE_KEYS.WAVEFORM_TYPE);
+            
+            if (savedInstruments) {
+                    INSTRUMENTS.length = 0;
+                    savedInstruments.forEach(inst => INSTRUMENTS.push({...inst}));
+            }
+            
+            if (savedWaveform) {
+                    this.elements.synthWaveformType.value = savedWaveform;
+                }
+
+                this.updateSynthControls();
+            }
+
+            saveConfig() {
+                const name = this.elements.configName.value.trim();
+                if (!name) {
+                    alert('Inserisci un nome per la configurazione');
+                    return;
+                }
+
+                this.soundConfigs[name] = {
+                    instruments: JSON.parse(JSON.stringify(INSTRUMENTS)),
+                    customSounds: {...this.customSounds},
+                    originalAudioFiles: {...this.originalAudioFiles}, // Salva anche file originali
+                    waveformType: this.elements.synthWaveformType.value,
+                    waveConfigs: Object.fromEntries(audioEngine.waveConfigs)
+                };
+
+                Storage.save(CONFIG.STORAGE_KEYS.SOUND_CONFIGS, this.soundConfigs);
+                this.updateConfigList();
+                this.elements.configName.value = '';
+                alert('Configurazione salvata con successo!');
+            }
+
+            loadConfig(name) {
+                const config = this.soundConfigs[name];
+                if (!config) return;
+
+                INSTRUMENTS.length = 0;
+                config.instruments.forEach(inst => INSTRUMENTS.push({...inst}));
+
+                this.customSounds = {...config.customSounds};
+                
+                // Carica anche i file originali se disponibili
+                if (config.originalAudioFiles) {
+                    this.originalAudioFiles = {...config.originalAudioFiles};
+                    console.log(`📁 Caricati ${Object.keys(this.originalAudioFiles).length} file audio originali`);
+                }
+                
+                Object.keys(this.customSounds).forEach(instrumentName => {
+                    audioEngine.loadCustomSound(instrumentName, this.customSounds[instrumentName]);
+                });
+
+                this.elements.synthWaveformType.value = config.waveformType;
+
+                // Load wave configs if available (for all instruments)
+                if (config.waveConfigs) {
+                    audioEngine.waveConfigs = new Map(Object.entries(config.waveConfigs));
+                    audioEngine.saveWaveConfigs();
+                    this.loadWaveConfigSettings();
+                } else if (config.waveConfig) {
+                    // Backwards compatibility: apply old single config to current instrument
+                    const instrumentName = this.elements.waveInstrumentSelect.value;
+                    audioEngine.updateWaveConfig(instrumentName, config.waveConfig);
+                    this.loadWaveConfigSettings();
+                }
+
+                // ========== CARICA SAMPLE RATE ORIGINALI ==========
+                if (config.originalSampleRates) {
+                    console.log('📊 Saltando caricamento sample rate originali (funzionalità rimossa)');
+                    // Funzionalità disabilitata - ora usiamo conversione automatica
+                }
+
+                this.updateSynthControls();
+                Storage.save(CONFIG.STORAGE_KEYS.CUSTOM_INSTRUMENTS, INSTRUMENTS);
+                Storage.save(CONFIG.STORAGE_KEYS.WAVEFORM_TYPE, config.waveformType);
+                alert('Configurazione caricata con successo!');
+            }
+
+            deleteConfig(name) {
+                if (confirm(`Sei sicuro di voler eliminare la configurazione "${name}"?`)) {
+                    delete this.soundConfigs[name];
+                    Storage.save(CONFIG.STORAGE_KEYS.SOUND_CONFIGS, this.soundConfigs);
+                    this.updateConfigList();
+                }
+            }
+
+            resetAllConfigurations() {
+                if (confirm('Sei sicuro di voler ripristinare tutte le impostazioni originali?')) {
+                    INSTRUMENTS.length = 0;
+                    this.originalInstruments.forEach(inst => INSTRUMENTS.push({...inst}));
+
+                    this.customSounds = {};
+                    audioEngine.customSounds = {};
+                    this.elements.synthWaveformType.value = 'sine';
+
+                    // Reset all wave configs to defaults
+                    audioEngine.waveConfigs.clear();
+                    audioEngine.saveWaveConfigs();
+
+                    Storage.remove(CONFIG.STORAGE_KEYS.CUSTOM_INSTRUMENTS);
+                    Storage.remove(CONFIG.STORAGE_KEYS.WAVEFORM_TYPE);
+                    Storage.remove('waveAudioConfigs');
+
+                    this.updateSynthControls();
+                    this.loadWaveConfigSettings();
+                    alert('Tutte le impostazioni sono state ripristinate ai valori originali!');
+                }
+            }
+
+            loadSavedConfigs() {
+                const savedConfigs = Storage.load(CONFIG.STORAGE_KEYS.SOUND_CONFIGS, {});
+                this.soundConfigs = savedConfigs;
+                this.updateConfigList();
+            }
+
+            updateConfigList() {
+                const list = this.elements.configList;
+            list.innerHTML = '';
+
+                Object.keys(this.soundConfigs).forEach(name => {
+                const item = document.createElement('div');
+                item.className = 'config-item';
+                
+                const nameSpan = document.createElement('span');
+                nameSpan.textContent = name;
+                
+                const actions = document.createElement('div');
+                actions.className = 'config-actions';
+                
+                const loadBtn = document.createElement('button');
+                loadBtn.textContent = 'Carica';
+                    loadBtn.onclick = () => this.loadConfig(name);
+                
+                const exportBtn = document.createElement('button');
+                exportBtn.textContent = 'Esporta';
+                    exportBtn.onclick = () => this.exportConfig(name);
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'Elimina';
+                    deleteBtn.onclick = () => this.deleteConfig(name);
+                
+                actions.appendChild(loadBtn);
+                actions.appendChild(exportBtn);
+                actions.appendChild(deleteBtn);
+                
+                item.appendChild(nameSpan);
+                item.appendChild(actions);
+                list.appendChild(item);
+            });
+        }
+
+            async exportConfig(name) {
+                const config = this.soundConfigs[name];
+                if (!config) return;
+
+                try {
+                    const exportData = {
+                        name: name,
+                        instruments: config.instruments,
+                        waveformType: config.waveformType,
+                        waveConfigs: config.waveConfigs || {},
+                        customSounds: {}
+                    };
+
+                    const zip = new JSZip();
+                    const folder = zip.folder(`minipops_config_${name}`);
+                    
+                    folder.file('config.json', JSON.stringify(exportData, null, 2));
+                    
+                    if (config.customSounds) {
+                        console.log('📦 Esportando file audio...');
+                        for (const [instrumentName, audioBuffer] of Object.entries(config.customSounds)) {
+                            
+                            // ========== USA FILE ORIGINALE SE DISPONIBILE ==========
+                            if (config.originalAudioFiles && config.originalAudioFiles[instrumentName]) {
+                                console.log(`📁 ${instrumentName}: usando file originale (senza alterazioni)`);
+                                folder.file(`${instrumentName}.wav`, config.originalAudioFiles[instrumentName]);
+                            } else {
+                                console.log(`🔄 ${instrumentName}: convertendo AudioBuffer (${audioBuffer.sampleRate}Hz) - file originale non disponibile`);
+                                const wavBlob = FileUtils.audioBufferToWav(audioBuffer);
+                                folder.file(`${instrumentName}.wav`, wavBlob);
+                            }
+                        }
+                    }
+                    
+                    const zipBlob = await zip.generateAsync({type: 'blob'});
+                    FileUtils.downloadBlob(zipBlob, `minipops_config_${name}.zip`);
+                    
+                    alert('Configurazione esportata con successo!');
+                } catch (err) {
+                    alert('Errore durante l\'esportazione: ' + err.message);
+                    console.error(err);
+                }
+            }
+
+            async handleConfigImport(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+            try {
+                const zip = await JSZip.loadAsync(file);
+                const files = zip.files;
+                
+                const configFile = Object.keys(files).find(filename => filename.endsWith('config.json'));
+                if (!configFile) {
+                        throw new Error('File di configurazione non trovato');
+                }
+                
+                const configText = await zip.file(configFile).async('text');
+                const config = JSON.parse(configText);
+                
+                if (!config.name || !config.instruments) {
+                    throw new Error('File di configurazione non valido');
+                }
+                
+                const newConfig = {
+                    instruments: config.instruments,
+                    waveformType: config.waveformType,
+                    waveConfigs: config.waveConfigs || {},
+                    customSounds: {},
+                    originalAudioFiles: {} // Conserva anche i file originali importati
+                };
+                
+                // ========== CARICA SAMPLE RATE ORIGINALI ==========
+                if (config.originalSampleRates) {
+                    console.log('📊 Caricando sample rate originali dalla configurazione...');
+                    Object.entries(config.originalSampleRates).forEach(([instrumentName, sampleRate]) => {
+                        audioEngine.setOriginalSampleRate(instrumentName, sampleRate);
+                        console.log(`🎧 ${instrumentName}: sample rate originale ${sampleRate}Hz`);
+                    });
+                }
+                
+                const audioFiles = Object.keys(files).filter(filename => filename.endsWith('.wav'));
+                if (audioFiles.length > 0) {
+                        audioEngine.init();
+                    
+                    for (const audioFile of audioFiles) {
+                        console.log(`🎧 Importando ${audioFile} con conversione automatica...`);
+                        const arrayBuffer = await zip.file(audioFile).async('arraybuffer');
+                        
+                        // ========== CONSERVA FILE ORIGINALE ==========
+                        const instrumentName = audioFile.split('/').pop().replace('.wav', '');
+                        newConfig.originalAudioFiles[instrumentName] = new Blob([arrayBuffer], { type: 'audio/wav' });
+                        console.log(`💾 File originale conservato per ${instrumentName} durante import pattern`);
+                        
+                        // ========== PROCESSA PER PLAYBACK ==========
+                        // Crea un oggetto File fittizio per usare FileUtils.loadAudioFile
+                        const fakeFile = new File([arrayBuffer], audioFile, { type: 'audio/wav' });
+                        const audioBuffer = await FileUtils.loadAudioFile(fakeFile, audioEngine.context);
+                        
+                        newConfig.customSounds[instrumentName] = audioBuffer;
+                        console.log(`✅ ${instrumentName}: caricato e convertito a ${audioBuffer.sampleRate}Hz`);
+                    }
+                }
+                
+                    this.soundConfigs[config.name] = newConfig;
+                    Storage.save(CONFIG.STORAGE_KEYS.SOUND_CONFIGS, this.soundConfigs);
+                    this.updateConfigList();
+                alert('Configurazione importata con successo!');
+                
+            } catch (err) {
+                    alert('Errore durante l\'importazione: ' + err.message);
+                console.error(err);
+                } finally {
+                    e.target.value = '';
+                }
+            }
+        }
+
+        // ========== EXPORT/IMPORT FUNCTIONALITY ==========
+        function convertToMiniPopsFormat(patternData) {
+            let output = '// Pattern generato da Web MiniPops\n\n';
+            output += `// Nome: ${patternData.name}\n`;
+            output += `// Steps: ${patternData.steps}\n`;
+            output += `// Tempo: ${patternData.tempo} BPM\n`;
+            output += `// Volumes: ${patternData.volumes.map((v, i) => `${INSTRUMENTS[i].name}=${Math.round(v * 100)}%`).join(', ')}\n\n`;
+            
+            output += 'const unsigned char pattern[] PROGMEM = {\n';
+            
+            for (let step = 0; step < patternData.steps; step++) {
+                let byte = 0;
+                for (let inst = 0; inst < 8; inst++) {
+                    if (patternData.pattern[inst][step] && patternData.activeInstruments[inst]) {
+                        byte |= (1 << (7 - inst));
+                    }
+                }
+                output += `B${byte.toString(2).padStart(8, '0')},\t//${step + 1}\n`;
+            }
+            
+            output += '};\n\n';
+            
+            // Add tempo and volume constants
+            output += `const int TEMPO = ${patternData.tempo};\n`;
+            output += `const float VOLUMES[8] = {\n`;
+            for (let i = 0; i < 8; i++) {
+                const volume = patternData.volumes[i] || 0.5;
+                output += `    ${volume.toFixed(2)}f${i < 7 ? ',' : ''}\t// ${INSTRUMENTS[i].name}\n`;
+            }
+            output += '};\n';
+            
+            return output;
+        }
+
+        async function exportPattern(name) {
+            try {
+                console.log(`📦 Esportando pattern "${name}" con configurazione completa...`);
+                
+                // ========== PREPARA DATI PATTERN ==========
+                const patternData = {
+                    name: name,
+                    steps: numSteps,
+                    pattern: instrumentPatterns.map(row => row.slice(0, numSteps)),
+                    activeInstruments: [...activeInstruments],
+                    tempo: player.tempo,
+                    volumes: volumeManager.getAllVolumes()
+                };
+
+                // ========== SALVA CONFIGURAZIONE CORRENTE ==========
+                // Salva la configurazione corrente con lo stesso nome del pattern
+                adminPanel.soundConfigs[name] = {
+                    instruments: JSON.parse(JSON.stringify(INSTRUMENTS)),
+                    customSounds: {...adminPanel.customSounds},
+                    originalAudioFiles: {...adminPanel.originalAudioFiles}, // Include file originali
+                    waveformType: document.getElementById('synthWaveformType').value,
+                    waveConfigs: Object.fromEntries(audioEngine.waveConfigs)
+                };
+                Storage.save(CONFIG.STORAGE_KEYS.SOUND_CONFIGS, adminPanel.soundConfigs);
+
+                // ========== CREA PACCHETTO ZIP ==========
+                const zip = new JSZip();
+                const folder = zip.folder(`minipops_pattern_${name}`);
+                
+                // File pattern specifici
+                folder.file('pattern.json', JSON.stringify(patternData, null, 2));
+                folder.file('pattern.ino', convertToMiniPopsFormat(patternData));
+
+                // ========== RIUTILIZZA LOGICA EXPORT CONFIGURAZIONE ==========
+                // Usa la stessa logica dell'AdminPanel.exportConfig per la configurazione
+                const exportData = {
+                    name: name,
+                    instruments: adminPanel.soundConfigs[name].instruments,
+                    waveformType: adminPanel.soundConfigs[name].waveformType,
+                    waveConfigs: adminPanel.soundConfigs[name].waveConfigs || {},
+                    customSounds: {}
+                };
+
+                folder.file('config.json', JSON.stringify(exportData, null, 2));
+                
+                // ========== EXPORT FILE AUDIO (LOGICA IDENTICA A ADMINPANEL) ==========
+                // Usa esattamente la stessa logica di AdminPanel.exportConfig per i file audio
+                if (adminPanel.soundConfigs[name].customSounds) {
+                    console.log(`🎧 Includendo ${Object.keys(adminPanel.soundConfigs[name].customSounds).length} file audio...`);
+                    
+                    for (const [instrumentName, audioBuffer] of Object.entries(adminPanel.soundConfigs[name].customSounds)) {
+                        
+                        // ========== USA FILE ORIGINALE SE DISPONIBILE ==========
+                        if (adminPanel.soundConfigs[name].originalAudioFiles && adminPanel.soundConfigs[name].originalAudioFiles[instrumentName]) {
+                            console.log(`📁 ${instrumentName}: usando file originale (senza alterazioni)`);
+                            folder.file(`${instrumentName}.wav`, adminPanel.soundConfigs[name].originalAudioFiles[instrumentName]);
+                        } else {
+                            console.log(`🔄 ${instrumentName}: convertendo AudioBuffer (${audioBuffer.sampleRate}Hz) - file originale non disponibile`);
+                            const wavBlob = FileUtils.audioBufferToWav(audioBuffer);
+                            folder.file(`${instrumentName}.wav`, wavBlob);
+                        }
+                        
+                        console.log(`🔊 Aggiunto audio: ${instrumentName}.wav`);
+                    }
+                }
+                
+                // ========== GENERA E SCARICA ZIP ==========
+                const zipBlob = await zip.generateAsync({type: 'blob'});
+                FileUtils.downloadBlob(zipBlob, `minipops_pattern_${name}.zip`);
+                
+                // ========== RIEPILOGO EXPORT ==========
+                const audioCount = adminPanel.soundConfigs[name].customSounds ? 
+                    Object.keys(adminPanel.soundConfigs[name].customSounds).length : 0;
+                    
+                console.log(`✅ Export completato:`);
+                console.log(`📊 Pattern: ${patternData.steps} steps, ${patternData.tempo} BPM`);
+                console.log(`🎧 File audio inclusi: ${audioCount}`);
+                console.log(`🔧 Configurazioni wave: ${Object.keys(exportData.waveConfigs).length}`);
+                
+                alert(`Pattern "${name}" esportato con successo!\n\n` +
+                      `📦 Pacchetto include:\n` +
+                      `• Pattern completo (${patternData.steps} steps)\n` +
+                      `• Configurazione suoni\n` +
+                      `• ${audioCount} file audio personalizzati\n` +
+                      `• File .ino per MiniPops hardware`);
+                      
+            } catch (err) {
+                console.error('❌ Errore export pattern:', err);
+                alert('Errore durante l\'esportazione: ' + err.message);
+            }
+        }
+
+        async function importPattern(file) {
+            try {
+                console.log(`📦 Importando pattern da ${file.name}...`);
+                
+                const zip = await JSZip.loadAsync(file);
+                const files = zip.files;
+                
+                // ========== IMPORT PATTERN DATA ==========
+                const patternFile = Object.keys(files).find(filename => filename.endsWith('pattern.json'));
+                if (!patternFile) {
+                    throw new Error('File pattern.json non trovato');
+                }
+                
+                const patternText = await zip.file(patternFile).async('text');
+                const patternData = JSON.parse(patternText);
+                
+                if (!patternData.name || !patternData.pattern || !patternData.steps) {
+                    throw new Error('File pattern non valido');
+                }
+
+                // ========== RIUTILIZZA LOGICA IMPORT CONFIGURAZIONE ==========
+                // Usa esattamente la stessa logica di AdminPanel.handleConfigImport
+                const configFile = Object.keys(files).find(filename => filename.endsWith('config.json'));
+                if (configFile) {
+                    console.log(`🔧 Importando configurazione...`);
+                    
+                    const configText = await zip.file(configFile).async('text');
+                    const config = JSON.parse(configText);
+                    
+                    if (!config.name || !config.instruments) {
+                        throw new Error('File di configurazione non valido');
+                    }
+                    
+                    // ========== STESSA LOGICA DI ADMINPANEL.HANDLECONFIGIMPORT ==========
+                    const newConfig = {
+                        instruments: config.instruments,
+                        waveformType: config.waveformType,
+                        waveConfigs: config.waveConfigs || {},
+                        customSounds: {},
+                        originalAudioFiles: {} // Conserva anche i file originali importati
+                    };
+                    
+                    // Import file audio con stessa logica dell'AdminPanel
+                    const audioFiles = Object.keys(files).filter(filename => filename.endsWith('.wav'));
+                    if (audioFiles.length > 0) {
+                        console.log(`🎧 Caricando ${audioFiles.length} file audio con conversione automatica...`);
+                        audioEngine.init();
+                        
+                        for (const audioFile of audioFiles) {
+                            console.log(`🎧 Importando ${audioFile} con conversione automatica...`);
+                            const arrayBuffer = await zip.file(audioFile).async('arraybuffer');
+                            
+                            // Crea un oggetto File fittizio per usare FileUtils.loadAudioFile
+                            const fakeFile = new File([arrayBuffer], audioFile, { type: 'audio/wav' });
+                            const audioBuffer = await FileUtils.loadAudioFile(fakeFile, audioEngine.context);
+                            
+                            // Stesso parsing del nome dell'AdminPanel
+                            const instrumentName = audioFile.split('/').pop().replace('.wav', '');
+                            newConfig.customSounds[instrumentName] = audioBuffer;
+                            console.log(`✅ ${instrumentName}: caricato e convertito a ${audioBuffer.sampleRate}Hz`);
+                        }
+                    }
+                    
+                    // Salva configurazione (stessa logica AdminPanel)
+                    adminPanel.soundConfigs[config.name] = newConfig;
+                    Storage.save(CONFIG.STORAGE_KEYS.SOUND_CONFIGS, adminPanel.soundConfigs);
+                    
+                    // ========== CARICA CONFIGURAZIONE AUTOMATICAMENTE ==========
+                    // Riutilizza AdminPanel.loadConfig per caricare tutto
+                    adminPanel.loadConfig(config.name);
+                    adminPanel.updateConfigList();
+                    
+                    console.log(`✅ Configurazione "${config.name}" importata e applicata`);
+                }
+                
+                // ========== CARICA DATI PATTERN ==========
+                console.log(`📊 Caricando pattern "${patternData.name}"...`);
+                
+                patternManager.numSteps = patternData.steps;
+                patternManager.patterns = patternData.pattern.map(row => {
+                    const newRow = Array(20).fill(0);
+                    row.forEach((value, index) => newRow[index] = value);
+                    return newRow;
+                });
+                patternManager.activeInstruments = [...patternData.activeInstruments];
+
+                // Import tempo
+                if (patternData.tempo && typeof patternData.tempo === 'number') {
+                    player.setTempo(patternData.tempo);
+                    document.getElementById('tempoSlider').value = patternData.tempo;
+                    document.getElementById('tempoValue').textContent = `${patternData.tempo} BPM`;
+                }
+
+                // Import volumes
+                if (patternData.volumes && Array.isArray(patternData.volumes)) {
+                    patternData.volumes.forEach((volume, index) => {
+                        if (index < INSTRUMENTS.length && typeof volume === 'number') {
+                            volumeManager.setVolume(index, volume);
+                        }
+                    });
+                }
+                
+                // ========== AGGIORNA UI ==========
+                uiManager.updateMatrix();
+                uiManager.updateStepsDisplay(patternManager.numSteps);
+                
+                // Salva pattern nella lista
+                patternManager.customPatterns[patternData.name] = {
+                    pattern: patternData.pattern,
+                    activeInstruments: patternData.activeInstruments,
+                    tempo: patternData.tempo || player.tempo,
+                    volumes: patternData.volumes || volumeManager.getAllVolumes()
+                };
+                Storage.save(CONFIG.STORAGE_KEYS.CUSTOM_PATTERNS, patternManager.customPatterns);
+                updateCustomPatternList();
+                
+                // Aggiorna UI admin panel se aperto
+                if (adminPanel.elements.adminPanel.classList.contains('active')) {
+                    adminPanel.updateSynthControls();
+                    adminPanel.loadWaveConfigSettings();
+                }
+                
+                // ========== RIEPILOGO IMPORT ==========
+                const audioCount = adminPanel.soundConfigs[patternData.name] ? 
+                    Object.keys(adminPanel.soundConfigs[patternData.name].customSounds || {}).length : 0;
+                    
+                console.log(`✅ Import completato:`);
+                console.log(`📊 Pattern: ${patternData.steps} steps, ${patternData.tempo} BPM`);
+                console.log(`🎧 File audio importati: ${audioCount}`);
+                console.log(`🔧 Configurazione applicata automaticamente`);
+                
+                alert(`Pattern "${patternData.name}" importato con successo!\n\n` +
+                      `📦 Importati:\n` +
+                      `• Pattern completo (${patternData.steps} steps, ${patternData.tempo} BPM)\n` +
+                      `• ${audioCount} file audio personalizzati\n` +
+                      `• Configurazione suoni applicata automaticamente\n\n` +
+                      `🎵 Il pattern è pronto per essere suonato!`);
+                      
+            } catch (err) {
+                console.error('❌ Errore import pattern:', err);
+                alert('Errore durante l\'importazione: ' + err.message);
+            }
+        }
+
+        // Initialize admin panel
+        const adminPanel = new AdminPanel();
+
+        // Add import pattern functionality
+        document.getElementById('importPatternBtn').addEventListener('click', () => {
+            document.getElementById('importPattern').click();
+        });
+
+        document.getElementById('importPattern').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                importPattern(file);
+            }
+            e.target.value = '';
+        });
+
+        // Update global variables when needed for legacy compatibility
+        function updateLegacyVars() {
+            numSteps = patternManager.numSteps;
+            instrumentPatterns = patternManager.patterns;
+            activeInstruments = patternManager.activeInstruments;
+            customPatterns = patternManager.customPatterns;
+            isPlaying = player.isPlaying;
+            currentStep = player.currentStep;
+            audioContext = audioEngine.context;
+            instrumentVolumes = volumeManager.getAllVolumes();
+        }
+
+        // Call update function when pattern manager state changes
+        patternManager.eventBus.on('stepsChanged', updateLegacyVars);
+        patternManager.eventBus.on('patternLoaded', updateLegacyVars);
+        patternManager.eventBus.on('customPatternLoaded', updateLegacyVars);
+        patternManager.eventBus.on('patternReset', updateLegacyVars);
+        player.eventBus.on('playStarted', updateLegacyVars);
+        player.eventBus.on('playStopped', updateLegacyVars);
+        player.eventBus.on('stepPlayed', updateLegacyVars);
+        volumeManager.eventBus.on('volumeChanged', updateLegacyVars);
+        volumeManager.eventBus.on('volumesReset', updateLegacyVars);
+    </script>
+</body>
+</html>
