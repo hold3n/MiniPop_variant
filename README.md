@@ -1,6 +1,8 @@
 # Web MiniPops
 
-Una moderna reinterpretazione web del classico rhythm box O2 Minipops, trasformando l'originale hardware in un'applicazione web interattiva e accessibile.
+Una reinterpretazione web del classico rhythm box O2 Minipops.
+Progetto esperimento per testare la rapidità di interpretazione e sviluppo di Cursor è Claude 3.
+Ogni linea di codice, file readme compreso, è scritto sfruttando calude 3.
 
 ## 🎵 Descrizione
 Web MiniPops è un rhythm box digitale che ricrea fedelmente i pattern ritmici del classico O2 Minipops in un'interfaccia web moderna e intuitiva. Il progetto mantiene l'essenza dell'originale mentre aggiunge funzionalità moderne e accessibilità attraverso il web.
